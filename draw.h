@@ -1,1 +1,1 @@
-int test_draw();
+void plotSphericalFunction(Complex (*f)(double,double,double));

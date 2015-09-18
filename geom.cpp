@@ -41,7 +41,6 @@ Quaternion::Quaternion(const Vector3 &p,double a) {
 	x=s*p.x;
 	y=s*p.y;
 	z=s*p.z;
-	printf("%f %f %f %f\n",w,x,y,z);
 }
 Vector3 Quaternion::rotate(const Vector3 &p) const {
 	Quaternion q(0,p.x,p.y,p.z);

@@ -1,7 +1,8 @@
 #include<stdio.h>
-#include"draw.h"
+#include"wave.h"
 int main(int argc, char **argv) {
-	test_draw();
+	init_wave();
+	test_wave();
 	return 0;
 };
 
