@@ -1,5 +1,6 @@
 struct Vector2;
 struct Vector3;
+struct Complex;
 struct Quaternion;
 struct Vector2 {
 	double x,y;
@@ -14,6 +15,12 @@ struct Vector3 {
 	double length() const;
 };
 std::ostream & operator << (std::ostream & cout,const Vector3 &v);
+struct Complex {
+	double x,y;
+	Complex (double x,double y);
+	double length() const;
+	double angle() const;
+};
 struct Quaternion {
 	double w,x,y,z;
 	Quaternion(double w,double x,double y,double z);

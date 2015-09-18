@@ -24,6 +24,14 @@ double Vector3::length() const {
 std::ostream & operator << (std::ostream & cout,const Vector3 &v) {
 	return cout<<"("<<v.x<<","<<v.y<<","<<v.z<<")";
 }
+Complex::Complex(double x,double y):x(x),y(y) {
+}
+double Complex::length() const {
+	return sqrt(x*x+y*y);
+}
+double Complex::angle() const {
+	return atan2(y,x);
+}
 Quaternion::Quaternion(double w,double x,double y,double z):w(w),x(x),y(y),z(z) {
 }
 Quaternion::Quaternion(const Vector3 &p,double a) {

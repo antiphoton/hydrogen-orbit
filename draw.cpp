@@ -13,7 +13,7 @@ const double PI=acos(-1.0);
 const int QUALITY=95;
 const int CANVAS_WIDTH=600,CANVAS_HEIGHT=600;
 static unsigned char canvas[CANVAS_HEIGHT][CANVAS_WIDTH*3];
-Quaternion camera(Vector3(1,1,1),acos(-1.0)/180*30);
+Quaternion camera(Vector3(1,1,1),acos(-1.0)/180*45);
 double viewRangeX=1,viewRangeY=viewRangeX/CANVAS_WIDTH*CANVAS_HEIGHT;
 struct BufferedPixel {
 	double z;
@@ -67,16 +67,14 @@ void finishBuffer() {
 		}
 	}
 };
-void setPoint(const Vector3 &p0,double real,double imaginary=0) {
+void setPoint(const Vector3 &p0,const Complex &v) {
 	Vector3 p1=camera.rotate(p0);
-	double m=sqrt(real*real+imaginary*imaginary);
-	double t=atan2(imaginary,real);
+	double m=v.length();
+	double t=v.angle();
 	if (m>1) {
 		m=1;
 	}
-	//printf("%f\n",t/PI/2);
-	//printf("%f\n",(t/PI+1)/2);
-	appendBuffer((p1.x/viewRangeX+1)/2*CANVAS_WIDTH,(1-p1.y/viewRangeY)/2*CANVAS_HEIGHT,p1.z,ColorRgb(ColorHsl(t/PI/2,1,0.5)),m*255);
+	appendBuffer((p1.x/viewRangeX+1)/2*CANVAS_WIDTH,(1-p1.y/viewRangeY)/2*CANVAS_HEIGHT,p1.z,ColorRgb(ColorHsl(t/PI/2,1,0.5)),m*m*255);
 }
 void writeJpeg() {
 	const int LENGTH=6;
@@ -109,16 +107,48 @@ void writeJpeg() {
 	jpeg_write_scanlines(&cinfo,row,CANVAS_HEIGHT);
 	jpeg_finish_compress(&cinfo);
 }
-int test_draw() {
+void plotCartesianFunction(Complex (*f)(double,double,double)) {
+	const double STEP=0.01;
 	clearBuffer();
-	double i;
-	for (i=-0;i<1;i+=0.001) {
-		setPoint(Vector3(i,0,0),1,0);
-		setPoint(Vector3(0,i,0),-0.5,0.866);
-		setPoint(Vector3(0,0,i),-0.5,-0.866);
+	double x,y,z;
+	for (x=-1;x<1;x+=STEP) {
+		for (y=-1;y<1;y+=STEP) {
+			for (z=-1;z<1;z+=STEP) {
+				setPoint(Vector3(x,y,z),f(x,y,z));
+			}
+		}
 	}
 	finishBuffer();
 	writeJpeg();
+}
+void plotSphericalFunction(Complex (*f)(double,double,double)) {
+	const double STEP=0.01;
+	clearBuffer();
+	double x,y,z;
+	double r,t,p;
+	for (x=-1;x<1;x+=STEP) {
+		for (y=-1;y<1;y+=STEP) {
+			for (z=-1;z<1;z+=STEP) {
+				r=sqrt(x*x+y*y+z*z);
+				t=acos(z/r);
+				p=atan2(y,x);
+				setPoint(Vector3(x,y,z),f(r,t,p));
+			}
+		}
+	}
+	finishBuffer();
+	writeJpeg();
+}
+Complex f1(double r,double theta,double phi) {
+	if (r<1) {
+		return Complex(sin(theta)*cos(3*phi)/2,0);
+	}
+	else {
+		return Complex(0,0);
+	}
+}
+int test_draw() {
+	plotSphericalFunction(f1);
 	return 0;
 }
 
