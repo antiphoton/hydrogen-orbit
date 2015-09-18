@@ -18,6 +18,7 @@ std::ostream & operator << (std::ostream & cout,const Vector3 &v);
 struct Complex {
 	double x,y;
 	Complex (double x,double y);
+	Complex (const Complex &c);
 	double length() const;
 	double angle() const;
 };

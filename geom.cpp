@@ -26,6 +26,8 @@ std::ostream & operator << (std::ostream & cout,const Vector3 &v) {
 }
 Complex::Complex(double x,double y):x(x),y(y) {
 }
+Complex::Complex(const Complex &c):x(c.x),y(c.y) {
+}
 double Complex::length() const {
 	return sqrt(x*x+y*y);
 }

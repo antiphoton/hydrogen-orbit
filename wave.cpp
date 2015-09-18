@@ -2,6 +2,7 @@
 #include<stdio.h>
 #include<iostream>
 #include"geom.h"
+#include"draw.h"
 #include"monte_carlo.h"
 #include"wave.h"
 RadialWave::RadialWave(int n,int l):n(n),l(l) {
@@ -14,7 +15,6 @@ RadialWave::RadialWave(int n,int l):n(n),l(l) {
 	c=1/sqrt(c);
 	for (k=0;k<n-l;k++) {
 		a[k]*=c;
-		printf("a[%d]=%f\n",k,a[k]);
 	}
 }
 double RadialWave::calc(double x) const {
@@ -28,10 +28,13 @@ double RadialWave::calc(double x) const {
 }
 void init_wave() {
 }
-double radialWave(int n,int l,double rho) {
+//RadialWave rw(3,1);
+Complex f(double r,double theta,double phi) {
+	//double z=rw.calc(r);
+	//printf("%f %f\n",r,z);
+	return Complex(1*sin(theta)*cos(phi),0);
 }
 void test_wave() {
-	init_wave();
-	RadialWave r(3,1);
+	//plotSphericalFunction(f);
 };
 

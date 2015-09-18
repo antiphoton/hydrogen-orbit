@@ -1,4 +1,4 @@
-const int MAX_N=3;
+const int MAX_N=10;
 struct RadialWave:Function11 {
 	double a[MAX_N];
 	int n,l;
