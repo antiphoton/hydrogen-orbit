@@ -13,8 +13,12 @@ const double PI=acos(-1.0);
 const int QUALITY=95;
 const int CANVAS_WIDTH=600,CANVAS_HEIGHT=600;
 static unsigned char canvas[CANVAS_HEIGHT][CANVAS_WIDTH*3];
-Quaternion camera(Vector3(0.732050807,1.767326988,3.414213562),acos(-1.0)/180*220);
-double viewRangeX=1,viewRangeY=viewRangeX/CANVAS_WIDTH*CANVAS_HEIGHT;
+Quaternion cameraFront(Vector3(0,1,1),acos(-1.0)/180*180);
+Quaternion cameraTop(Vector3(0,0,1),acos(-1.0)/180*180);
+Quaternion cameraLeft(Vector3(1,1,1),acos(-1.0)/180*240);
+Quaternion cameraEqual(Vector3(0.732050807,1.767326988,3.414213562),acos(-1.0)/180*220);
+Quaternion camera(Vector3(0,0,1),0);
+double viewRangeX=1.5,viewRangeY=viewRangeX/CANVAS_WIDTH*CANVAS_HEIGHT;
 struct BufferedPixel {
 	double z;
 	Complex v;
@@ -121,20 +125,6 @@ void writeJpeg() {
 	jpeg_write_scanlines(&cinfo,row,CANVAS_HEIGHT);
 	jpeg_finish_compress(&cinfo);
 }
-void plotCartesianFunction(Complex (*f)(double,double,double)) {
-	const double STEP=0.01;
-	clearBuffer();
-	double x,y,z;
-	for (x=-1;x<1;x+=STEP) {
-		for (y=-1;y<1;y+=STEP) {
-			for (z=-1;z<1;z+=STEP) {
-				setPoint(Vector3(x,y,z),f(x,y,z));
-			}
-		}
-	}
-	finishBuffer();
-	writeJpeg();
-}
 void plotAxies() {
 	clearBuffer();
 	double i;
@@ -147,8 +137,8 @@ void plotAxies() {
 	writeJpeg();
 }
 void plotSphericalFunction(Complex (*f)(double,double,double)) {
-	const double RANGE=3;
-	const double STEP=RANGE/30;
+	const double RANGE=viewRangeX*2;
+	const double STEP=RANGE/200;
 	clearBuffer();
 	double x,y,z;
 	double r,t,p;
@@ -165,6 +155,16 @@ void plotSphericalFunction(Complex (*f)(double,double,double)) {
 	finishBuffer();
 	writeJpeg();
 }
+void plotSphericalFunctionFull(Complex (*f)(double,double,double)) {
+	camera=cameraFront;
+	plotSphericalFunction(f);
+	camera=cameraTop;
+	plotSphericalFunction(f);
+	camera=cameraLeft;
+	plotSphericalFunction(f);
+	camera=cameraEqual;
+	plotSphericalFunction(f);
+}
 Complex f1(double r,double theta,double phi) {
 	if (r<1) {
 		return Complex(sin(theta)*cos(3*phi)/2,0);
@@ -174,7 +174,6 @@ Complex f1(double r,double theta,double phi) {
 	}
 }
 int test_draw() {
-	plotAxies();
 	return 0;
 }
 

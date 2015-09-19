@@ -22,6 +22,7 @@ struct Complex {
 	double length() const;
 	double angle() const;
 };
+std::ostream & operator << (std::ostream & cout,const Complex &c);
 struct Quaternion {
 	double w,x,y,z;
 	Quaternion(double w,double x,double y,double z);

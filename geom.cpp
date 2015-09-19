@@ -34,6 +34,9 @@ double Complex::length() const {
 double Complex::angle() const {
 	return atan2(y,x);
 }
+std::ostream & operator << (std::ostream & cout,const Complex &c) {
+	cout<<c.x<<" + i "<<c.y;
+}
 Quaternion::Quaternion(double w,double x,double y,double z):w(w),x(x),y(y),z(z) {
 }
 Quaternion::Quaternion(const Vector3 &p,double a) {

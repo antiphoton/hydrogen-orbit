@@ -18,7 +18,7 @@ double getRandomExponential(double k=1) {
 }
 
 inline double parabolaIntegrate(const Function11 &f,double a,double b) {
-	return (f.calc(a)+f.calc((a+b)/2)*4+f.calc(b))*(b-a)/6;
+	return (f.integrated(a)+f.integrated((a+b)/2)*4+f.integrated(b))*(b-a)/6;
 }
 double simpson(const Function11 &f,double a,double b,double eps,double sT) {
 	double c=(a+b)/2;
@@ -44,7 +44,6 @@ double simpsonHalfInf(const Function11 &f,double eps) {
 			break;
 		}
 		m*=2;
-		printf("%f\n",m);
 	}
 	return s;
 }
