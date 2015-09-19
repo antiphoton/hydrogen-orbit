@@ -127,7 +127,7 @@ Complex f(double r,double theta,double phi) {
 	}
 }
 void test_wave() {
-	plotSphericalFunctionFull(f);
+//	plotSphericalFunctionFull(f);
 		return ;
 	if (0) {
 		AssociatedLegendre b(1,1);
