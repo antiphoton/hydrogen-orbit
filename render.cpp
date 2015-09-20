@@ -2,6 +2,7 @@
 #include<stdio.h>
 #include<cstdlib>
 #include<iostream>
+#include"mympi.h"
 #include"render.h"
 #include"color.h"
 using std::cout;
@@ -136,9 +137,11 @@ SphericalFunctionPlotter::~SphericalFunctionPlotter() {
 		delete gif;
 	}
 	if (isJpeg) {
-		static char cmd[1024];
-		sprintf(cmd,"ffmpeg -y -framerate %d -i output/img_%%05d.jpg -c:v libx264 -r 30 -pix_fmt yuv420p %s",fps,filename.c_str());
-		std::system(cmd);
+		if (mpi.rank==0) {
+			static char cmd[1024];
+			sprintf(cmd,"ffmpeg -y -framerate %d -i output/img_%%05d.jpg -c:v libx264 -r 30 -pix_fmt yuv420p %s",fps,filename.c_str());
+			std::system(cmd);
+		}
 	}
 }
 void SphericalFunctionPlotter::addViewPort(Rect2 screen,Quaternion camera) {
@@ -166,6 +169,9 @@ void SphericalFunctionPlotter::plot() {
 	unsigned char *data=new unsigned char[width*height*3];
 	int t;
 	for (t=0;t<time;t++) {
+		if (t%mpi.size!=mpi.rank) {
+			continue;
+		}
 		int y2,x2,z2;
 		for (y2=0;y2<height;y2++) {
 			for (x2=0;x2<width;x2++) {
@@ -256,7 +262,7 @@ Complex f1(double r,double theta,double phi,double t) {
 
 void test_render() {
 	//const int w=100,h=100,l=72;
-	const int w=60,h=60,l=100;
+	const int w=120,h=120,l=30;
 	SphericalFunctionPlotter sp(f1,w,h,0.2,l,"/home/cbx/Dropbox/nodejs/web/buffer/out.mp4","jpeg");
 	//sp.addViewPort(Rect2(0,0,1,1),Quaternion(Vector3(0.732050807,1.767326988,3.414213562),acos(-1.0)/180*220));
 }

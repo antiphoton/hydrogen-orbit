@@ -1,4 +1,5 @@
 #include<stdio.h>
+#include<mpi.h>
 #include<iostream>
 #include"geom.h"
 #include"render.h"
