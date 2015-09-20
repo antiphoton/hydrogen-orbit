@@ -1,5 +1,6 @@
 #include"math.h"
 #include<stdio.h>
+#include<cstdlib>
 #include<iostream>
 #include"render.h"
 #include"color.h"
@@ -84,7 +85,36 @@ bool GifMaker::save() {
 	EGifCloseFile(file);
 	return true;
 }
-SphericalFunctionPlotter::SphericalFunctionPlotter(Complex (*f)(double,double,double,double),int width,int height,double zoom,int time,const string &filename,int fps):f(f),width(width),height(height),time(time),gif(width,height,time,filename),fps(fps) {
+bool writeJpegFile(unsigned char *data,int width,int height,const char *filename,int quality) {
+	FILE *file=fopen(filename,"wb");
+	struct jpeg_compress_struct cinfo;
+	struct jpeg_error_mgr       jerr;
+
+	cinfo.err = jpeg_std_error(&jerr);
+	jpeg_create_compress(&cinfo);
+	jpeg_stdio_dest(&cinfo, file);
+
+	cinfo.image_width      = width;
+	cinfo.image_height     = height;
+	cinfo.input_components = 3;
+	cinfo.in_color_space   = JCS_RGB;
+	jpeg_set_defaults(&cinfo);
+	jpeg_set_quality(&cinfo,quality,true);
+	jpeg_start_compress(&cinfo,true);
+	//JSAMPROW *row=new JSAMPROW[height];
+	static JSAMPROW row[1000];
+	int i;
+	for (i=0;i<height;i++) {
+		row[i]=(JSAMPROW) &data[width*i*3];
+	}
+	jpeg_write_scanlines(&cinfo,row,height);
+	jpeg_finish_compress(&cinfo);
+	//delete[] row;
+	//fclose(file);
+
+	return true;
+}
+SphericalFunctionPlotter::SphericalFunctionPlotter(Complex (*f)(double,double,double,double),int width,int height,double zoom,int time,const string &filename,const string &filetype,int fps):f(f),width(width),height(height),time(time),filename(filename),isGif(filetype=="gif"),isJpeg(filetype=="jpeg"),fps(fps) {
 	if (width<=height) {
 		zoom3=Vector3(zoom,zoom/height*width,0);
 	}
@@ -93,12 +123,23 @@ SphericalFunctionPlotter::SphericalFunctionPlotter(Complex (*f)(double,double,do
 	}
 	zoom3.z=sqrt(zoom3.x*zoom3.y);
 	depth=sqrt(width*height);
+	if (isGif) {
+		gif=new GifMaker(width,height,time,filename);
+	}
 }
 SphericalFunctionPlotter::~SphericalFunctionPlotter() {
 	if (views.size()==0) {
 		addViewPort(Rect2(0,0,1,1),Quaternion(Vector3(0.732050807,1.767326988,3.414213562),acos(-1.0)/180*220));
 	}
 	plot();
+	if (isGif) {
+		delete gif;
+	}
+	if (isJpeg) {
+		static char cmd[1024];
+		sprintf(cmd,"ffmpeg -y -framerate %d -i output/img_%%05d.jpg -c:v libx264 -r 30 -pix_fmt yuv420p %s",fps,filename.c_str());
+		std::system(cmd);
+	}
 }
 void SphericalFunctionPlotter::addViewPort(Rect2 screen,Quaternion camera) {
 	if (screen.min.x<0) {
@@ -176,26 +217,33 @@ void SphericalFunctionPlotter::plot() {
 				data[(y2*width+x2)*3+2]=color.b;
 			}
 		}
-		gif.setFrame(t,data,1.0/fps);
+		if (isGif) {
+			gif->setFrame(t,data,1.0/fps);
+		}
+		if (isJpeg) {
+			static char fileFinalName[256];
+			sprintf(fileFinalName,"output/img_%05d.jpg",t);
+			writeJpegFile(data,width,height,fileFinalName,100);
+		}
 	}
 	delete[] data;
 }
 
 Complex f1(double r,double theta,double phi,double t) {
-	const double omega=2*PI/144;
+	const double omega=2*PI/72;
 	Complex ret(0,0);
-	double x=r*sin(theta)*cos(phi);
-	double y=r*sin(theta)*sin(phi);
-	double z=r*cos(theta);
-	if (fabs(y)<0.1&&fabs(z)<0.1&&x>0&&x<2) {
-		ret=Complex(1,0);
-	}
-	if (fabs(z)<0.1&&fabs(x)<0.1&&y>0&&y<2) {
-		ret=Complex(-0.5,0.866);
-	}
-	if (fabs(x)<0.1&&fabs(y)<0.1&&z>0&&z<2) {
-		ret=Complex(-0.5,-0.866);
-	}
+	//double x=r*sin(theta)*cos(phi);
+	//double y=r*sin(theta)*sin(phi);
+	//double z=r*cos(theta);
+	//if (fabs(y)<0.1&&fabs(z)<0.1&&x>0&&x<2) {
+	//	ret=Complex(1,0);
+	//}
+	//if (fabs(z)<0.1&&fabs(x)<0.1&&y>0&&y<2) {
+	//	ret=Complex(-0.5,0.866);
+	//}
+	//if (fabs(x)<0.1&&fabs(y)<0.1&&z>0&&z<2) {
+	//	ret=Complex(-0.5,-0.866);
+	//}
 	ret=Complex(sin(theta)*cos(phi),sin(theta)*sin(phi))*exp(-0.5*r*r);
 	return ret*Complex(cos(t*omega),sin(t*omega));
 	t=2;
@@ -207,9 +255,9 @@ Complex f1(double r,double theta,double phi,double t) {
 }
 
 void test_render() {
-	const int w=60,h=60,l=24;
-	//const int w=10,h=10,d=10,l=1;
-	SphericalFunctionPlotter sp(f1,w,h,0.2,l,"/home/cbx/Dropbox/nodejs/web/buffer/output.gif");
+	//const int w=100,h=100,l=72;
+	const int w=60,h=60,l=100;
+	SphericalFunctionPlotter sp(f1,w,h,0.2,l,"/home/cbx/Dropbox/nodejs/web/buffer/out.mp4","jpeg");
 	//sp.addViewPort(Rect2(0,0,1,1),Quaternion(Vector3(0.732050807,1.767326988,3.414213562),acos(-1.0)/180*220));
 }
 

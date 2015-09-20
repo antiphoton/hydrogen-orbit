@@ -1,6 +1,6 @@
 CC=g++ -Wall -Wextra -O3
 a.out : main.o color.o geom.o monte_carlo.o render.o wave.o
-	$(CC) -o a.out -lgif main.o color.o geom.o monte_carlo.o render.o wave.o
+	$(CC) -o a.out -lgif -ljpeg main.o color.o geom.o monte_carlo.o render.o wave.o
 main.o : main.cpp
 	$(CC) -o main.o -c main.cpp
 color.o : color.cpp
