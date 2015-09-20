@@ -1,3 +1,4 @@
+#pragma once
 const int MAX_N=10;
 struct Legendre {
 	double *a;
