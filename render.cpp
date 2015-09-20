@@ -202,7 +202,7 @@ Complex f1(double r,double theta,double phi,double t) {
 }
 
 void test_render() {
-	const int w=50,h=50,l=144;
+	const int w=30,h=30,l=144;
 	//const int w=10,h=10,d=10,l=1;
 	SphericalFunctionPlotter sp(f1,w,h,0.2,l,"/home/cbx/Dropbox/nodejs/web/buffer/output.gif");
 	//sp.addViewPort(Rect2(0,0,1,1),Quaternion(Vector3(0.732050807,1.767326988,3.414213562),acos(-1.0)/180*220));

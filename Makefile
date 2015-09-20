@@ -14,5 +14,5 @@ monte_carlo.o : monte_carlo.cpp
 wave.o : wave.cpp
 	$(CC) -o wave.o -c wave.cpp
 clean : 
-	rm *.o
+	rm *.o a.out
 
