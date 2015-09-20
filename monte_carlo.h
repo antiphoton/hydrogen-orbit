@@ -1,3 +1,4 @@
+#pragma once
 struct Function11 {
 	virtual double integrated(double) const=0;
 };
