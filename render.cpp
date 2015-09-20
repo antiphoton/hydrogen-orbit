@@ -1,6 +1,7 @@
 #include"math.h"
 #include<stdio.h>
 #include<cstdlib>
+#include<ctime>
 #include<iostream>
 #include"mympi.h"
 #include"render.h"
@@ -115,7 +116,7 @@ bool writeJpegFile(unsigned char *data,int width,int height,const char *filename
 
 	return true;
 }
-SphericalFunctionPlotter::SphericalFunctionPlotter(Complex (*f)(double,double,double,double),int width,int height,double zoom,int time,const string &filename,const string &filetype,int fps):f(f),width(width),height(height),time(time),filename(filename),isGif(filetype=="gif"),isJpeg(filetype=="jpeg"),fps(fps) {
+SphericalFunctionPlotter::SphericalFunctionPlotter(Complex (*f)(double,double,double,double),int width,int height,double zoom,int nFrame,const string &filename,const string &filetype,int fps):f(f),width(width),height(height),nFrame(nFrame),filename(filename),isGif(filetype=="gif"),isJpeg(filetype=="jpeg"),fps(fps) {
 	if (width<=height) {
 		zoom3=Vector3(zoom,zoom/height*width,0);
 	}
@@ -125,7 +126,7 @@ SphericalFunctionPlotter::SphericalFunctionPlotter(Complex (*f)(double,double,do
 	zoom3.z=sqrt(zoom3.x*zoom3.y);
 	depth=sqrt(width*height);
 	if (isGif) {
-		gif=new GifMaker(width,height,time,filename);
+		gif=new GifMaker(width,height,nFrame,filename);
 	}
 }
 SphericalFunctionPlotter::~SphericalFunctionPlotter() {
@@ -165,11 +166,84 @@ void SphericalFunctionPlotter::addViewPort(Rect2 screen,Quaternion camera) {
 	}
 	views.push_back(make_pair(screen,-camera));
 }
+double myTimediff(timespec t1,timespec t2) {
+	return (t1.tv_sec-t2.tv_sec)+(t1.tv_nsec-t2.tv_nsec)*1e-9;
+}
 void SphericalFunctionPlotter::plot() {
 	unsigned char *data=new unsigned char[width*height*3];
+	if (isJpeg&&mpi.rank==0) {
+		system("rm output/*");
+		long allTotal=0,allFinish=0;
+		vector<long> total(mpi.size),finish(mpi.size);
+		timespec now;
+		timespec globalBegin;
+		clock_gettime(CLOCK_REALTIME,&now);
+		globalBegin=now;
+		vector<timespec> beginTime(mpi.size);
+		vector<double> cost(mpi.size),cost2(mpi.size);
+		long t;
+		int i;
+		for (i=1;i<mpi.size;i++) {
+			for (t=0;t<nFrame;t++) {
+				if (t%(mpi.size-1)!=(i-1)) {
+					continue;
+				}
+				total[i]+=height;
+			}
+			beginTime[i]=now;
+			allTotal+=total[i];
+			cost[i]=0;
+			cost2[i]=0;
+		}
+		MPI_Status stat;
+		for (t=0;t<allTotal;t++) {
+			MPI_Recv(&i,1,MPI_INT,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&stat);
+			if (stat.MPI_TAG!=1) {
+				continue;
+			}
+			finish[i]++;
+			allFinish++;
+			clock_gettime(CLOCK_REALTIME,&now);
+			//printf("%d\t%f\r",t,now-beginTime[1]);
+			double delta=myTimediff(now,beginTime[i]);
+			cost[i]+=delta;
+			cost2[i]+=delta*delta;
+			beginTime[i]=now;
+			double mu=0,sigma=0;
+			for (i=1;i<mpi.size;i++) {
+				mu+=cost[i];
+				sigma+=cost2[i];
+			}
+			mu/=allFinish;
+			sigma/=allFinish*allFinish;
+			sigma=sqrt(sigma);
+			double slowest=0,current;
+			for (i=0;i<mpi.size;i++) {
+				current=(total[i]-finish[i])*mu;
+				current-=myTimediff(now,beginTime[i]);
+				if (current>slowest) {
+					slowest=current;
+				}
+			}
+			{
+				int time=slowest+0.5;
+				int second=time%60;
+				time/=60;
+				int minute=time%60;
+				time/=60;
+				int hour=time%24;
+				time/=24;
+				int day=time;
+				printf("%15.2f%%     %3d:%02d:%02d:%02d\r",100.0*allFinish/allTotal,day,hour,minute,second);
+			}
+			//printf("%.3f\t%.6f\t%.6f\r",t,100.0*allFinish/allTotal,slowest,sigma);
+		}
+		printf("\n");
+	//	MPI_Recv
+	}
 	int t;
-	for (t=0;t<time;t++) {
-		if (t%mpi.size!=mpi.rank) {
+	for (t=0;t<nFrame;t++) {
+		if (t%(mpi.size-1)!=(mpi.rank-1)) {
 			continue;
 		}
 		int y2,x2,z2;
@@ -222,6 +296,7 @@ void SphericalFunctionPlotter::plot() {
 				data[(y2*width+x2)*3+1]=color.g;
 				data[(y2*width+x2)*3+2]=color.b;
 			}
+			MPI_Send(&mpi.rank,1,MPI_INT,0,1,MPI_COMM_WORLD);
 		}
 		if (isGif) {
 			gif->setFrame(t,data,1.0/fps);
@@ -230,6 +305,7 @@ void SphericalFunctionPlotter::plot() {
 			static char fileFinalName[256];
 			sprintf(fileFinalName,"output/img_%05d.jpg",t);
 			writeJpegFile(data,width,height,fileFinalName,100);
+			MPI_Send(&mpi.rank,1,MPI_INT,0,2,MPI_COMM_WORLD);
 		}
 	}
 	delete[] data;
@@ -238,19 +314,8 @@ void SphericalFunctionPlotter::plot() {
 Complex f1(double r,double theta,double phi,double t) {
 	const double omega=2*PI/72;
 	Complex ret(0,0);
-	//double x=r*sin(theta)*cos(phi);
-	//double y=r*sin(theta)*sin(phi);
-	//double z=r*cos(theta);
-	//if (fabs(y)<0.1&&fabs(z)<0.1&&x>0&&x<2) {
-	//	ret=Complex(1,0);
-	//}
-	//if (fabs(z)<0.1&&fabs(x)<0.1&&y>0&&y<2) {
-	//	ret=Complex(-0.5,0.866);
-	//}
-	//if (fabs(x)<0.1&&fabs(y)<0.1&&z>0&&z<2) {
-	//	ret=Complex(-0.5,-0.866);
-	//}
-	ret=Complex(sin(theta)*cos(phi),sin(theta)*sin(phi))*exp(-0.5*r*r);
+	//ret=Complex(sin(theta)*cos(phi),sin(theta)*sin(phi))*exp(-0.5*r*r);
+	ret=Complex(cos(2*phi),sin(2*phi))*(r*r*exp(-r/3)*sin(theta)*cos(theta));
 	return ret*Complex(cos(t*omega),sin(t*omega));
 	t=2;
 	if (r<1) {
@@ -262,8 +327,11 @@ Complex f1(double r,double theta,double phi,double t) {
 
 void test_render() {
 	//const int w=100,h=100,l=72;
-	const int w=120,h=120,l=30;
+	const int w=100,h=100,l=72;
 	SphericalFunctionPlotter sp(f1,w,h,0.2,l,"/home/cbx/Dropbox/nodejs/web/buffer/out.mp4","jpeg");
-	//sp.addViewPort(Rect2(0,0,1,1),Quaternion(Vector3(0.732050807,1.767326988,3.414213562),acos(-1.0)/180*220));
+	sp.addViewPort(Rect2(0,0,0.5,0.5),Quaternion(Vector3(0,1,1),acos(-1.0)/180*180));
+	sp.addViewPort(Rect2(0,0.5,0.5,1),Quaternion(Vector3(0,0,1),acos(-1.0)/180*180));
+	sp.addViewPort(Rect2(0.5,0,1,0.5),Quaternion(Vector3(1,1,1),acos(-1.0)/180*240));
+	sp.addViewPort(Rect2(0.5,0.5,1,1),Quaternion(Vector3(0.732050807,1.767326988,3.414213562),acos(-1.0)/180*220));
 }
 
