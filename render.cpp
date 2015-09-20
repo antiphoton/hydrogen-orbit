@@ -128,7 +128,7 @@ void SphericalFunctionPlotter::plot() {
 		int y2,x2,z2;
 		for (y2=0;y2<height;y2++) {
 			for (x2=0;x2<width;x2++) {
-				double r=1,g=1,b=1;
+				double yColor=1,uColor=0.5,vColor=0.5;
 				int iView;
 				for (iView=views.size()-1;iView>=0;iView--) {
 					Vector2 p1=views[iView].first.screenToClient(Vector2(1.0*x2/width,1.0*y2/height));
@@ -155,20 +155,25 @@ void SphericalFunctionPlotter::plot() {
 							phi=0;
 						}
 						Complex value=f(rho,theta,phi,t);
-						ColorRgb color(ColorHsl(value.angle()/PI/2,1,0.5));
+						double angle=value.angle();
 						double alpha=value.length();
-						alpha*=alpha;
 						if (alpha>1) {
 							alpha=1;
 						}
-						r=r*(1-alpha)+color.r/255.0*alpha;
-						g=g*(1-alpha)+color.g/255.0*alpha;
-						b=b*(1-alpha)+color.b/255.0*alpha;
+						double yColor1,uColor1,vColor1;
+						yColor1=0;
+						uColor1=0.5+0.5*cos(angle);
+						vColor1=0.5+0.5*sin(angle);
+						alpha*=alpha;
+						yColor=yColor*(1-alpha)+yColor1*alpha;
+						uColor=uColor*(1-alpha)+uColor1*alpha;
+						vColor=vColor*(1-alpha)+vColor1*alpha;
 					}
 				}
-				data[(y2*width+x2)*3+0]=r>1?255:255*r;
-				data[(y2*width+x2)*3+1]=g>1?255:255*g;
-				data[(y2*width+x2)*3+2]=b>1?255:255*b;
+				ColorRgb color(ColorYuv(yColor,uColor,vColor));
+				data[(y2*width+x2)*3+0]=color.r;
+				data[(y2*width+x2)*3+1]=color.g;
+				data[(y2*width+x2)*3+2]=color.b;
 			}
 		}
 		gif.setFrame(t,data,1.0/fps);
@@ -202,7 +207,7 @@ Complex f1(double r,double theta,double phi,double t) {
 }
 
 void test_render() {
-	const int w=30,h=30,l=144;
+	const int w=60,h=60,l=24;
 	//const int w=10,h=10,d=10,l=1;
 	SphericalFunctionPlotter sp(f1,w,h,0.2,l,"/home/cbx/Dropbox/nodejs/web/buffer/output.gif");
 	//sp.addViewPort(Rect2(0,0,1,1),Quaternion(Vector3(0.732050807,1.767326988,3.414213562),acos(-1.0)/180*220));
