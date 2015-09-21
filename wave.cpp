@@ -4,6 +4,7 @@
 #include"geom.h"
 #include"draw.h"
 #include"monte_carlo.h"
+#include"render.h"
 #include"wave.h"
 const static double PI=acos(-1.0);
 void diffPoly(double *a,int n,int d=1) {
@@ -53,7 +54,7 @@ AssociatedLegendre::AssociatedLegendre(int l,int m):l(l),m(m) {
 	for (i=0;i<=l-m;i++) {
 		a[i]=p0.a[i];
 	}
-	double c;
+	//double c;
 }
 AssociatedLegendre::~AssociatedLegendre() {
 	delete[] a;
@@ -111,37 +112,12 @@ double SphericalHarmonic::integrated(double theta) const {
 void init_wave() {
 }
 //RadialWave rw(3,1);
-Complex f(double r,double theta,double phi) {
-	if (fabs(r*cos(theta))<0.1) {
-		return Complex(cos(phi),sin(phi));
-	}
-	else {
-		return Complex(0,0);
-	}
+static Complex f1(double r,double theta,double phi,double t) {
 	static SphericalHarmonic b(1,1);
-	if (fabs(r-1)<0.1) {
-		return b.calc(theta,phi);
-	}
-	else {
-		return Complex(0,0);
-	}
+	return b.calc(theta,phi);
 }
 void test_wave() {
-//	plotSphericalFunctionFull(f);
-		return ;
-	if (0) {
-		AssociatedLegendre b(1,1);
-		double x;
-		while (scanf("%lf",&x)!=EOF) {
-			std::cout<<b.calc(x)<<std::endl;
-		}
-	}
-	else {
-	static SphericalHarmonic b(1,1);
-		double theta,phi;
-		while (scanf("%lf%lf",&theta,&phi)!=EOF) {
-			std::cout<<b.calc(theta,phi)<<std::endl;
-		}
-	}
+	const int w=200,h=200,l=8;
+	SphericalFunctionPlotter sp(f1,w,h,0.5,l,"/home/cbx/buffer/Monday/out.mp4","jpeg");//Dropbox/nodejs/web/buffer/out.mp4","jpeg");
 };
 

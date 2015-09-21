@@ -1,24 +1,28 @@
 #pragma once
 #include<iostream>
+#include"geom.h"
+struct ColorRgbA;
 struct ColorHsl;
 struct ColorRgb;
 struct ColorYuv;
+struct ColorRgbA {
+	double r,g,b,a;
+	ColorRgbA(double r=0,double g=0,double b=0,double a=0);
+	ColorRgbA(const ColorHsl &c);
+	ColorRgbA(const ColorYuv &c);
+	ColorRgbA(const Complex &c);
+	void writeToBytes(unsigned char *p);
+};
+ColorRgbA operator + (const ColorRgbA &c1,const ColorRgbA &c2);
 struct ColorHsl {
-	unsigned char h,s,l;
-	ColorHsl(unsigned char h,unsigned char s,unsigned char l);
+	double h,s,l;
 	ColorHsl(double h,double s,double l);
 };
 std::ostream & operator << (std::ostream & cout,const ColorHsl &c);
-struct ColorRgb {
-	unsigned char r,g,b;
-	ColorRgb(unsigned char r=0,unsigned char g=0,unsigned char b=0);
-	ColorRgb(double r,double g,double b);
-	ColorRgb(const ColorHsl &c);
-	ColorRgb(const ColorYuv &c);
-};
-std::ostream & operator << (std::ostream & cout,const ColorRgb &c);
 struct ColorYuv {
-	unsigned char y,u,v;
-	ColorYuv(unsigned char y=0,unsigned char u=0,unsigned char v=0);
+	double y,u,v;
 	ColorYuv(double y,double u,double v);
+	ColorYuv(const ColorRgbA &c);
 };
+
+

@@ -18,7 +18,7 @@ class GifMaker {
 	unsigned char *red,*green,*blue;
 	int *duration;
 };
-bool writeJpegFile(unsigned char *data,int width,int height,const char *filename,int quality=90);
+bool writeJpegFile(unsigned char *data,int width,int height,const char *filename,int quality=100);
 class SphericalFunctionPlotter {
 	public:
 	SphericalFunctionPlotter(Complex (*f)(double,double,double,double),int width,int height,double zoom,int nFrame,const std::string &filename,const std::string &filetype,int fps=24);

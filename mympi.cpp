@@ -74,7 +74,7 @@ void MpiTaskManager::analyze(int iThread) {
 	cost+=delta;
 	cost2+=delta*delta;
 	double mu=cost/finishSlow;
-	double sigma=sqrt((cost2/finishSlow-mu*mu)/finishSlow);
+	//double sigma=sqrt((cost2/finishSlow-mu*mu)/finishSlow);
 	double slowest=0,current;
 	int i;
 	for (i=0;i<mpiGlobal.size;i++) {
@@ -85,16 +85,15 @@ void MpiTaskManager::analyze(int iThread) {
 		}
 	}
 	if (slowest<=99) {
-		printf("Estimated Time: %d seconds\r",(int)(slowest+0.5));
+		printf("Estimated Remaining: %2d seconds            \r",(int)(slowest+0.5));
 	}
 	else {
 		time_t f=now.tv_sec+now.tv_nsec/1e9+slowest+0.5;
 		tm *timeinfo=localtime(&f);
 		static char timeBuffer[256];
 		strftime(timeBuffer,256,"%F %X",timeinfo);
-		printf("Estiamted Remaining: %s\r",timeBuffer);
+		printf("Estiamted Time:     %s\r",timeBuffer);
 	}
-	//printf("%f\t%f\t%lld\r",1.0*finishSlow/totalSlow,slowest,now.tv_sec);
 }
 int MpiTaskManager::whoShouldDo(int hash) {
 	return hash%(mpiGlobal.size-1)+1;

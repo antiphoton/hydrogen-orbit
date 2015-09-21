@@ -103,7 +103,6 @@ bool writeJpegFile(unsigned char *data,int width,int height,const char *filename
 	jpeg_set_defaults(&cinfo);
 	jpeg_set_quality(&cinfo,quality,true);
 	jpeg_start_compress(&cinfo,true);
-	//JSAMPROW *row=new JSAMPROW[height];
 	static JSAMPROW row[1000];
 	int i;
 	for (i=0;i<height;i++) {
@@ -111,8 +110,7 @@ bool writeJpegFile(unsigned char *data,int width,int height,const char *filename
 	}
 	jpeg_write_scanlines(&cinfo,row,height);
 	jpeg_finish_compress(&cinfo);
-	//delete[] row;
-	//fclose(file);
+	fclose(file);
 
 	return true;
 }
@@ -131,7 +129,10 @@ SphericalFunctionPlotter::SphericalFunctionPlotter(Complex (*f)(double,double,do
 }
 SphericalFunctionPlotter::~SphericalFunctionPlotter() {
 	if (views.size()==0) {
-		addViewPort(Rect2(0,0,1,1),Quaternion(Vector3(0.732050807,1.767326988,3.414213562),acos(-1.0)/180*220));
+		addViewPort(Rect2(0,0,0.5,0.5),Quaternion(Vector3(0,1,1),acos(-1.0)/180*180));
+		addViewPort(Rect2(0,0.5,0.5,1),Quaternion(Vector3(0,0,1),acos(-1.0)/180*180));
+		addViewPort(Rect2(0.5,0,1,0.5),Quaternion(Vector3(1,1,1),acos(-1.0)/180*240));
+		addViewPort(Rect2(0.5,0.5,1,1),Quaternion(Vector3(0.732050807,1.767326988,3.414213562),acos(-1.0)/180*220));
 	}
 	plot();
 	if (isGif) {
@@ -142,7 +143,7 @@ SphericalFunctionPlotter::~SphericalFunctionPlotter() {
 			static char cmd[1024];
 			sprintf(cmd,"ffmpeg -y -framerate %d -i output/img_%%05d.jpg -c:v libx264 -r 30 -pix_fmt yuv420p %s",fps,filename.c_str());
 			std::system(cmd);
-			system("rm output/*");
+			//system("rm output/*");
 		}
 	}
 }
@@ -175,8 +176,8 @@ void SphericalFunctionPlotter::plot() {
 		int y2,x2,z2;
 		for (y2=0;y2<height;y2++) {
 			if (taskManager.isMyTask(t)) {
-				for (x2=0;x2<width;x2++) {
-					double yColor=1,uColor=0.5,vColor=0.5;
+				for (x2=1;x2<width;x2++) {
+					ColorRgbA color(1,1,1,1);
 					int iView;
 					for (iView=views.size()-1;iView>=0;iView--) {
 						Vector2 p1=views[iView].first.screenToClient(Vector2(1.0*x2/width,1.0*y2/height));
@@ -203,29 +204,15 @@ void SphericalFunctionPlotter::plot() {
 								phi=0;
 							}
 							Complex value=f(rho,theta,phi,t);
-							double angle=value.angle();
-							double alpha=value.length();
-							if (alpha>1) {
-								alpha=1;
-							}
-							double yColor1,uColor1,vColor1;
-							yColor1=0;
-							uColor1=0.5+0.5*cos(angle);
-							vColor1=0.5+0.5*sin(angle);
-							alpha*=alpha;
-							yColor=yColor*(1-alpha)+yColor1*alpha;
-							uColor=uColor*(1-alpha)+uColor1*alpha;
-							vColor=vColor*(1-alpha)+vColor1*alpha;
+							color=ColorRgbA(value)+color;
 						}
 					}
-					ColorRgb color(ColorYuv(yColor,uColor,vColor));
-					data[(y2*width+x2)*3+0]=color.r;
-					data[(y2*width+x2)*3+1]=color.g;
-					data[(y2*width+x2)*3+2]=color.b;
+					data[(y2*width+x2)*3+0]=color.r*255;
+					data[(y2*width+x2)*3+1]=color.g*255;
+					data[(y2*width+x2)*3+2]=color.b*255;
 				}
 			}
 			taskManager.submitSlowTask(t);
-			//MPI_Send(&mpiGlobal.rank,1,MPI_INT,0,1,MPI_COMM_WORLD);
 		}
 		if (isGif) {
 			gif->setFrame(t,data,1.0/fps);
@@ -237,17 +224,16 @@ void SphericalFunctionPlotter::plot() {
 				writeJpegFile(data,width,height,fileFinalName,100);
 			}
 			taskManager.submitQuickTask(t);
-			//MPI_Send(&mpiGlobal.rank,1,MPI_INT,0,2,MPI_COMM_WORLD);
 		}
 	}
 	delete[] data;
 }
 
-Complex f1(double r,double theta,double phi,double t) {
-	const double omega=2*PI/72;
+static Complex f1(double r,double theta,double phi,double t) {
+	const double omega=2*PI/216;
 	Complex ret(0,0);
 	//ret=Complex(sin(theta)*cos(phi),sin(theta)*sin(phi))*exp(-0.5*r*r);
-	ret=Complex(cos(phi),sin(phi))*(1.0/25*r*r*exp(-r/3)*sin(theta)*cos(theta));
+	ret=Complex(cos(2*phi),sin(2*phi))*(1.0/25*r*r*exp(-r/3)*sin(theta)*sin(theta));
 	return ret*Complex(cos(t*omega),sin(t*omega));
 	t=2;
 	if (r<1) {
@@ -258,12 +244,9 @@ Complex f1(double r,double theta,double phi,double t) {
 }
 
 void test_render() {
+	return ;
 	//const int w=100,h=100,l=72;
-	const int w=500,h=500,l=72;
-	SphericalFunctionPlotter sp(f1,w,h,0.02,l,"/home/cbx/Dropbox/nodejs/web/buffer/out.mp4","jpeg");
-	sp.addViewPort(Rect2(0,0,0.5,0.5),Quaternion(Vector3(0,1,1),acos(-1.0)/180*180));
-	sp.addViewPort(Rect2(0,0.5,0.5,1),Quaternion(Vector3(0,0,1),acos(-1.0)/180*180));
-	sp.addViewPort(Rect2(0.5,0,1,0.5),Quaternion(Vector3(1,1,1),acos(-1.0)/180*240));
-	sp.addViewPort(Rect2(0.5,0.5,1,1),Quaternion(Vector3(0.732050807,1.767326988,3.414213562),acos(-1.0)/180*220));
+	const int w=100,h=100,l=32;
+	SphericalFunctionPlotter sp(f1,w,h,0.02,l,"/home/cbx/Dropbox/nodejs/web/buffer/out320.mp4","jpeg");
 }
 
