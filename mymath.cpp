@@ -1,7 +1,116 @@
 #include<math.h>
 #include<stdio.h>
+#include<string.h>
 #include<iostream>
 #include"mymath.h"
+Factorial::Factorial() {
+	v.push_back(1);
+}
+double Factorial::operator [] (int n) {
+	int s=v.size();
+	if (n>=s) {
+		int i;
+		for (i=s;i<=n;i++) {
+			v.push_back(v.back()*i);
+		}
+	}
+	return v[n];
+}
+Factorial factorial;
+Polynomial::Polynomial(int n):data(n) {
+}
+Polynomial::~Polynomial() {
+}
+int Polynomial::size() const {
+	return data.size();
+}
+double Polynomial::operator [](int i) const {
+	return data[i];
+}
+double & Polynomial::operator [](int i) {
+	return data[i];
+}
+Polynomial & Polynomial::operator = (const Polynomial &that) {
+	data=that.data;
+	return *this;
+}
+Polynomial Polynomial::operator >> (int d) const {
+	int n=data.size();
+	Polynomial p(n-d);
+	int i;
+	for (i=n-1;i>=d;i--) {
+		p[i-d]=data[i]*factorial[i]/factorial[i-d];
+	}
+	return p;
+}
+Polynomial Polynomial::operator * (double k) const {
+	int n=data.size();
+	Polynomial p(n);
+	int i;
+	for (i=0;i<n;i++) {
+		p[i]=data[i]*k;
+	}
+	return p;
+}
+Polynomial Polynomial::operator * (const Polynomial &that) const {
+	const Polynomial &x1=*this,x2=that;
+	int n1=x1.data.size();
+	int n2=x2.data.size();
+	Polynomial y(n1+n2-1);
+	int i,j;
+	for (i=0;i<n1;i++) {
+		for (j=0;j<n2;j++) {
+			y.data[i+j]+=x1.data[i]*x2.data[j];
+		}
+	}
+	return y;
+}
+double Polynomial::integrateExponential(double lambda) const {
+	int n=data.size();
+	double k=1;
+	double y=0;
+	int i;
+	for (i=0;i<n;i++) {
+		k/=lambda;
+		y+=data[i]*factorial[i]*k;
+	}
+	return y;
+}
+std::ostream & operator << (std::ostream & cout,const Polynomial &p) {
+	bool zero=true;
+	int n=p.size();
+	int i;
+	for (i=n-1;i>=0;i--) {
+		double k=p[i];
+		if (k==0) {
+			continue;
+		}
+		if (!zero||k<0) {
+			cout<<' '<<(k>0?'+':'-')<<' ';
+		}
+		zero=false;
+		k=fabs(k);
+		if (k!=1) {
+			cout<<k<<' ';
+		}
+		if (i>0) {
+			cout<<'x';
+		}
+		else {
+			if (k==1) {
+				cout<<'1';
+			}
+		}
+		if (i>1) {
+			cout<<'^'<<i;
+		}
+	}
+	if (zero) {
+		cout<<'0';
+	}
+	return cout;
+}
+
 Vector2::Vector2(double x=0,double y=0):x(x),y(y) {
 }
 Vector2::Vector2(const Vector2 &v) {

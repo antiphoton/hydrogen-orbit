@@ -143,7 +143,7 @@ SphericalFunctionPlotter::~SphericalFunctionPlotter() {
 			static char cmd[1024];
 			sprintf(cmd,"ffmpeg -y -framerate %d -i output/img_%%05d.jpg -c:v libx264 -r 30 -pix_fmt yuv420p %s",fps,filename.c_str());
 			std::system(cmd);
-			//system("rm output/*");
+			system("rm output/*");
 		}
 	}
 }
@@ -246,7 +246,7 @@ static Complex f1(double r,double theta,double phi,double t) {
 void test_render() {
 	return ;
 	//const int w=100,h=100,l=72;
-	const int w=100,h=100,l=32;
+	const int w=100,h=100,l=8;
 	SphericalFunctionPlotter sp(f1,w,h,0.02,l,"/home/cbx/Dropbox/nodejs/web/buffer/out320.mp4","jpeg");
 }
 

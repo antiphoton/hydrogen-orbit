@@ -1,21 +1,21 @@
 #pragma once
 const int MAX_N=10;
 struct Legendre {
-	double *a;
 	int n;
+	Polynomial a;
 	Legendre(int n);
 	~Legendre();
 };
 struct AssociatedLegendre {
-	double *a;
 	int l,m;
+	Polynomial a;
 	AssociatedLegendre(int l,int m);
 	~AssociatedLegendre();
 	double calc(double x) const;
 };
-struct RadialWave:Function11 {
-	double a[MAX_N];
+struct RadialWave {
 	int n,l;
+	Polynomial a;
 	RadialWave(int n,int l);
 	double calc(double rho) const;
 	double integrated(double x) const ;

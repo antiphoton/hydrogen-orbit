@@ -34,18 +34,3 @@ double simpson(const Function11 &f,double a,double b,double eps,double sT) {
 double simpson(const Function11 &f,double a,double b,double eps) {
 	return simpson(f,a,b,eps,parabolaIntegrate(f,a,b));
 }
-double simpsonHalfInf(const Function11 &f,double eps) {
-	double m=0.987654321;
-	double s=simpson(f,0,m,eps);
-	while (1) {
-		double y=simpson(f,m,m*2,eps);
-		s+=y;
-		if (y<eps) {
-			break;
-		}
-		m*=2;
-	}
-	return s;
-}
-
-

@@ -1,9 +1,35 @@
 #pragma once
+#include<vector>
 struct Vector2;
 struct Rect2;
 struct Vector3;
 struct Complex;
 struct Quaternion;
+class Factorial{
+	public:
+		Factorial();
+		double operator[] (int n);
+	private:
+		std::vector<double> v;
+};
+extern Factorial factorial;
+class Polynomial {
+	public:
+		Polynomial(int n=0);
+		~Polynomial();
+		int size() const;
+		double operator [](int i) const;
+		double & operator [](int i);
+		Polynomial & operator = (const Polynomial &that);
+		Polynomial operator >> (int d) const;
+		Polynomial operator * (double k) const;
+		Polynomial operator * (const Polynomial &that) const;
+		double integrateExponential (double lambda) const;
+	private:
+		std::vector<double> data;
+};
+std::ostream & operator << (std::ostream & cout,const Polynomial &p);
+
 struct Vector2 {
 	double x,y;
 	Vector2(double x,double y);
