@@ -1,7 +1,7 @@
 #include<stdio.h>
 #include<mpi.h>
 #include<iostream>
-#include"geom.h"
+#include"mymath.h"
 #include"render.h"
 #include"monte_carlo.h"
 #include"wave.h"

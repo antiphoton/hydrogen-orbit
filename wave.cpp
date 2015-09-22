@@ -1,12 +1,15 @@
 #include<math.h>
 #include<stdio.h>
 #include<iostream>
-#include"geom.h"
-#include"draw.h"
+#include"mymath.h"
 #include"monte_carlo.h"
 #include"render.h"
 #include"wave.h"
 const static double PI=acos(-1.0);
+struct Polynomial {
+	int *a;
+	Polynomial();
+};
 void diffPoly(double *a,int n,int d=1) {
 	int i,j;
 	for (i=0;i<n;i++) {
@@ -84,19 +87,21 @@ RadialWave::RadialWave(int n,int l):n(n),l(l) {
 		a[k]*=c;
 	}
 }
-double RadialWave::integrated(double x) const {
+double RadialWave::calc(double x) const {
 	double y=0;
 	int k;
 	for (k=0;k<n-l;k++) {
 		y+=a[k]*pow(x,l+k)*exp(-x/n);
 	}
-	//printf("f(%f)=%f\n",x,y);
+	return y;
+}
+double RadialWave::integrated(double x) const {
+	double y=calc(x);
 	return x*x*y*y;
 }
 SphericalHarmonic::SphericalHarmonic(int l,int m):l(l),m(m),pal(l,m) {
 	a=1;
 	double c=simpson(*this,0,PI);
-	printf("%f\n",c);
 	a=1/sqrt(c);
 }
 SphericalHarmonic::~SphericalHarmonic() {
@@ -113,11 +118,15 @@ void init_wave() {
 }
 //RadialWave rw(3,1);
 static Complex f1(double r,double theta,double phi,double t) {
-	static SphericalHarmonic b(1,1);
-	return b.calc(theta,phi);
+	const int n=5,l=3,m=1;
+	static RadialWave a(n,l); static SphericalHarmonic b(l,m);
+	return Complex(a.calc(r),0)*b.calc(theta,phi)*100;
 }
 void test_wave() {
-	const int w=200,h=200,l=8;
-	SphericalFunctionPlotter sp(f1,w,h,0.5,l,"/home/cbx/buffer/Monday/out.mp4","jpeg");//Dropbox/nodejs/web/buffer/out.mp4","jpeg");
+	//const int w=500,h=500,l=8;
+	//SphericalFunctionPlotter sp(f1,w,h,1.0/5/5/5,l,"/home/cbx/buffer/Monday/out.mp4","jpeg");//Dropbox/nodejs/web/buffer/out.mp4","jpeg");
+	const int n=5,l=3,m=1;
+	static RadialWave a(n,l);
+	//static SphericalHarmonic b(l,m);
 };
 

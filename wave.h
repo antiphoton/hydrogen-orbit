@@ -17,6 +17,7 @@ struct RadialWave:Function11 {
 	double a[MAX_N];
 	int n,l;
 	RadialWave(int n,int l);
+	double calc(double rho) const;
 	double integrated(double x) const ;
 };
 struct SphericalHarmonic:Function11 {

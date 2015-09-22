@@ -3,7 +3,7 @@
 #include<vector>
 #include<gif_lib.h>
 #include<jpeglib.h>
-#include"geom.h"
+#include"mymath.h"
 class GifMaker {
 	public:
 	GifMaker(int width,int height,int nFrame,const std::string &filename);

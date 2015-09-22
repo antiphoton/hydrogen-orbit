@@ -8,10 +8,6 @@ MpiGlobal::MpiGlobal() {
 	MPI_Init(&argc,&argv);
 	MPI_Comm_rank(MPI_COMM_WORLD,&rank);
 	MPI_Comm_size(MPI_COMM_WORLD,&size);
-	if (!(size>1)) {
-		puts("Please run this in mpi.");
-		abort();
-	}
 }
 MpiGlobal::~MpiGlobal() {
 	MPI_Finalize();
@@ -27,6 +23,12 @@ timespec getTime() {
 	return now;
 }
 MpiTaskManager::MpiTaskManager() {
+	bool first=false;
+	if (first&&!(mpiGlobal.size>1)) {
+		puts("Please run this in mpi.");
+		abort();
+		first=true;
+	}
 	head=mpiGlobal.rank==0;
 	if (!head) {
 		return ;

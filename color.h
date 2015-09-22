@@ -1,6 +1,6 @@
 #pragma once
 #include<iostream>
-#include"geom.h"
+#include"mymath.h"
 struct ColorRgbA;
 struct ColorHsl;
 struct ColorRgb;

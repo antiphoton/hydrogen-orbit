@@ -1,7 +1,7 @@
 #include<math.h>
 #include<stdio.h>
 #include<iostream>
-#include"geom.h"
+#include"mymath.h"
 Vector2::Vector2(double x=0,double y=0):x(x),y(y) {
 }
 Vector2::Vector2(const Vector2 &v) {
