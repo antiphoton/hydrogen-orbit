@@ -88,10 +88,10 @@ static Complex f1(double r,double theta,double phi,double t) {
 	const int n=6,l=3,m=2;
 	static RadialWave a(n,l);
 	static SphericalHarmonic b(l,m);
-	return Complex(a.calc(r),0)*b.calc(theta,phi)*200;
+	return Complex(a.calc(r),0)*b.calc(theta,phi)*150;
 }
 void test_wave() {
-	const int w=200,h=200,l=8;
+	const int w=100,h=100,l=8;
 	SphericalFunctionPlotter sp(f1,w,h,1.0/5/5/5,l,"/home/cbx/buffer/Monday/out.mp4","jpeg");//Dropbox/nodejs/web/buffer/out.mp4","jpeg");
 	//const int n=3,l=7,m=3;
 	//f1(0,0,0,0);

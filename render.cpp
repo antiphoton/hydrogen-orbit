@@ -1,4 +1,5 @@
-#include"math.h"
+#include<math.h>
+#include<string.h>
 #include<stdio.h>
 #include<cstdlib>
 #include<ctime>
@@ -126,6 +127,10 @@ SphericalFunctionPlotter::SphericalFunctionPlotter(Complex (*f)(double,double,do
 	if (isGif) {
 		gif=new GifMaker(width,height,nFrame,filename);
 	}
+	if (isJpeg) {
+		lumaStats=new long[LUMA_WIDTH];
+		memset(lumaStats,0,sizeof(long)*LUMA_WIDTH);
+	}
 }
 SphericalFunctionPlotter::~SphericalFunctionPlotter() {
 	if (views.size()==0) {
@@ -135,16 +140,18 @@ SphericalFunctionPlotter::~SphericalFunctionPlotter() {
 		addViewPort(Rect2(0.5,0.5,1,1),Quaternion(Vector3(0.732050807,1.767326988,3.414213562),acos(-1.0)/180*220));
 	}
 	plot();
+	writeStats();
 	if (isGif) {
 		delete gif;
 	}
 	if (isJpeg) {
 		if (mpiGlobal.rank==0) {
 			static char cmd[1024];
-			sprintf(cmd,"ffmpeg -y -framerate %d -i output/img_%%05d.jpg -c:v libx264 -r 30 -pix_fmt yuv420p %s",fps,filename.c_str());
+			sprintf(cmd,"ffmpeg -y -framerate %d -i output/img_%%05d.jpg -c:v libx264 -r 30 -pix_fmt yuv420p %s 1>/dev/null 2>&1",fps,filename.c_str());
 			std::system(cmd);
-			system("rm output/*");
+			system("rm output/*.jpg");
 		}
+		delete[] lumaStats;
 	}
 }
 void SphericalFunctionPlotter::addViewPort(Rect2 screen,Quaternion camera) {
@@ -205,6 +212,25 @@ void SphericalFunctionPlotter::plot() {
 							}
 							Complex value=f(rho,theta,phi,t);
 							color=ColorRgbA(value)+color;
+							double lumaD=value.length()*value.length();
+							int lumaI;
+							if (lumaD<=0) {
+								lumaI=0;
+							}
+							else {
+								const double log10=log(10);
+								const double logMin=log(LUMA_MIN)/log10;
+								const double logMax=log(LUMA_MAX)/log10;
+								lumaD=log(lumaD)/log10;
+								lumaI=(lumaD-logMin)/(logMax-logMin)*LUMA_WIDTH;
+								if (lumaI<0) {
+									lumaI=0;
+								}
+								if (lumaI>=LUMA_WIDTH) {
+									lumaI=LUMA_WIDTH-1;
+								}
+							}
+							lumaStats[lumaI]++;
 						}
 					}
 					data[(y2*width+x2)*3+0]=color.r*255;
@@ -227,6 +253,44 @@ void SphericalFunctionPlotter::plot() {
 		}
 	}
 	delete[] data;
+}
+void SphericalFunctionPlotter::writeStats() {
+	const int TAG_STATS=10;
+	if (mpiGlobal.rank!=0) {
+		MPI_Send(lumaStats,LUMA_WIDTH,MPI_LONG,0,TAG_STATS,MPI_COMM_WORLD);
+	}
+	else {
+		MPI_Status mpiStat;
+		int i,j;
+		static long buffer[LUMA_WIDTH];
+		for (i=1;i<mpiGlobal.size;i++) {
+			MPI_Recv(&buffer,LUMA_WIDTH,MPI_LONG,MPI_ANY_SOURCE,TAG_STATS,MPI_COMM_WORLD,&mpiStat);
+			for (j=0;j<LUMA_WIDTH;j++) {
+				lumaStats[j]+=buffer[j];
+			}
+		}
+		const double log10=log(10);
+		const double logMin=log(LUMA_MIN)/log10;
+		const double logMax=log(LUMA_MAX)/log10;
+		long total=0;
+		double sum1=0,sum2=0;
+		for (i=0;i<LUMA_WIDTH;i++) {
+		}
+		for (i=0;i<LUMA_WIDTH;i++) {
+			double x=exp(((i+0.5)/LUMA_WIDTH*(logMax-logMin)+logMin)*log10);
+			total+=lumaStats[i];
+			sum1+=x*lumaStats[i];
+			sum2+=x*x*lumaStats[i];
+		}
+		double mu=sum1/total;
+		double sigma=sqrt(sum2/total-mu*mu);
+		mu*=depth;
+		sigma/=sqrt(depth);
+		puts("Recommended factor");
+		for (i=0;i<3;i++) {
+			printf("%8.3f%c",sqrt((i+1)/(mu+sigma)),i<3-1?'\t':'\n');
+		}
+	}
 }
 
 static Complex f1(double r,double theta,double phi,double t) {

@@ -140,3 +140,4 @@ ColorYuv::ColorYuv(const ColorRgbA &c) {
 	v=0.499*c.r-0.418*c.g-0.0813*c.b+0.5;
 }
 
+

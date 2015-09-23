@@ -26,6 +26,7 @@ class SphericalFunctionPlotter {
 	void addViewPort(Rect2 screen,Quaternion camera);
 	private:
 	void plot();
+	void writeStats();
 	std::vector< std::pair<Rect2,Quaternion> > views;
 	Complex (*f)(double r,double theta,double phi,double t);
 	Vector3 zoom3;
@@ -34,6 +35,9 @@ class SphericalFunctionPlotter {
 	const bool isGif,isJpeg;
 	GifMaker *gif;
 	const int fps;
+	static const double LUMA_MIN=1e-10,LUMA_MAX=1e10;
+	static const int LUMA_WIDTH=1920;
+	long *lumaStats;
 };
 
 void test_render();

@@ -34,3 +34,4 @@ double simpson(const Function11 &f,double a,double b,double eps,double sT) {
 double simpson(const Function11 &f,double a,double b,double eps) {
 	return simpson(f,a,b,eps,parabolaIntegrate(f,a,b));
 }
+
