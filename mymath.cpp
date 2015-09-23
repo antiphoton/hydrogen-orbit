@@ -158,11 +158,17 @@ double Complex::length() const {
 double Complex::angle() const {
 	return atan2(y,x);
 }
+Complex Complex::operator ! () const {
+	return Complex(x,-y);
+}
 Complex operator * (const Complex &c1,double c2) {
 	return Complex(c1.x*c2,c1.y*c2);
 }
 Complex operator * (const Complex &c1,const Complex &c2) {
 	return Complex(c1.x*c2.x-c1.y*c2.y,c1.x*c2.y+c1.y*c2.x);
+}
+Complex operator + (const Complex &c1,const Complex &c2) {
+	return Complex(c1.x+c2.x,c1.y+c2.y);
 }
 std::ostream & operator << (std::ostream & cout,const Complex &c) {
 	return cout<<c.x<<" + i "<<c.y;

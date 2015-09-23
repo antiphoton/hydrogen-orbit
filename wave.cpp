@@ -2,6 +2,7 @@
 #include<stdio.h>
 #include<iostream>
 #include"mymath.h"
+#include"mympi.h"
 #include"monte_carlo.h"
 #include"render.h"
 #include"wave.h"
@@ -67,35 +68,24 @@ double RadialWave::integrated(double x) const {
 	double y=calc(x);
 	return x*x*y*y;
 }
-SphericalHarmonic::SphericalHarmonic(int l,int m):l(l),m(m),pal(l,m) {
+SphericalHarmonic::SphericalHarmonic(int l,int m):l(l),m(m) {
+	pal=new AssociatedLegendre(l,m>=0?m:-m);
 	a=1;
 	double c=simpson(*this,0,PI);
 	a=1/sqrt(c);
+	if (m<0&&(-m)%2==1) {
+		//a=-a;
+	}
 }
 SphericalHarmonic::~SphericalHarmonic() {
+	delete pal;
 }
 Complex SphericalHarmonic::calc(double theta,double phi) const {
-	double y=a*pal.calc(cos(theta));
-	return Complex(y*cos(phi),y*sin(phi));
+	double y=a*pal->calc(cos(theta));
+	return Complex(y*cos(m*phi),y*sin(m*phi));
 }
 double SphericalHarmonic::integrated(double theta) const {
-	double y=a*pal.calc(cos(theta));
+	double y=a*pal->calc(cos(theta));
 	return (2*PI)*sin(theta)*y*y;
 }
-void init_wave() {
-}
-static Complex f1(double r,double theta,double phi,double t) {
-	const int n=6,l=3,m=2;
-	static RadialWave a(n,l);
-	static SphericalHarmonic b(l,m);
-	return Complex(a.calc(r),0)*b.calc(theta,phi)*150;
-}
-void test_wave() {
-	const int w=100,h=100,l=8;
-	SphericalFunctionPlotter sp(f1,w,h,1.0/5/5/5,l,"/home/cbx/buffer/Monday/out.mp4","jpeg");//Dropbox/nodejs/web/buffer/out.mp4","jpeg");
-	//const int n=3,l=7,m=3;
-	//f1(0,0,0,0);
-	//while (1);
-	//static RadialWave a(n,l);
-};
 

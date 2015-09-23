@@ -1,4 +1,5 @@
 #pragma once
+#include<iostream>
 #include<vector>
 struct Vector2;
 struct Rect2;
@@ -56,9 +57,11 @@ struct Complex {
 	Complex (const Complex &c);
 	double length() const;
 	double angle() const;
+	Complex operator ! () const;
 };
 Complex operator * (const Complex &c1,double c2);
 Complex operator * (const Complex &c1,const Complex &c2);
+Complex operator + (const Complex &c1,const Complex &c2);
 std::ostream & operator << (std::ostream & cout,const Complex &c);
 struct Quaternion {
 	double w,x,y,z;

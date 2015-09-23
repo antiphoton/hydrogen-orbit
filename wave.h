@@ -22,7 +22,7 @@ struct RadialWave {
 struct SphericalHarmonic:Function11 {
 	double a;
 	int l,m;
-	AssociatedLegendre pal;
+	AssociatedLegendre *pal;
 	SphericalHarmonic(int l,int m);
 	~SphericalHarmonic();
 	Complex calc(double theta,double phi) const ;
@@ -32,5 +32,4 @@ struct Hydrogen {
 	int n,l,m;
 	Hydrogen(int n,int l,int m);
 };
-void init_wave();
-void test_wave();
+
