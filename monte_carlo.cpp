@@ -34,7 +34,10 @@ double simpson(const Function11 &f,double a,double b,double eps,double sT) {
 double simpson(const Function11 &f,double a,double b,double eps) {
 	return simpson(f,a,b,eps,parabolaIntegrate(f,a,b));
 }
-Complex integrateNormal3(Complex (*f)(double r,double theta,double phi),const Vector3 &pMu,const Vector3 &pSigma,const Vector3 &waveNumber,double eps) {
+Complex integrateSqrtNormal3(Complex (*f)(double r,double theta,double phi),const Vector3 &pMu,Vector3 pSigma,const Vector3 &waveNumber,double eps) {
+	pSigma.x*=sqrt(2);
+	pSigma.y*=sqrt(2);
+	pSigma.z*=sqrt(2);
 	srand(time(0));
 	double ansX1=0,ansY1=0;
 	double ansX2=0,ansY2=0;
@@ -75,6 +78,6 @@ Complex integrateNormal3(Complex (*f)(double r,double theta,double phi),const Ve
 			break;
 		}
 	}
-	return Complex(ansX1/n,ansY1/n);
+	return Complex(ansX1/n,ansY1/n)*(pow(2,1.5)*pow(acos(-1.0),0.75)*sqrt(pSigma.x*pSigma.y*pSigma.z));
 }
 

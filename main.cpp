@@ -22,14 +22,15 @@ struct Eigenstate {
 	RadialWave *fR;
 	SphericalHarmonic *fS;
 	Complex weight;
+	bool ignored;
 	double energy;
-	Eigenstate(int n,int l,int m):n(n),l(l),m(m),weight(0,0) {
+	Eigenstate(int n,int l,int m):n(n),l(l),m(m),weight(0,0),ignored(false) {
 		fR=new RadialWave(n,l);
 		fS=new SphericalHarmonic(l,m);
 	}
 };
 ostream & operator << (ostream &cout,const Eigenstate &s) {
-	return cout<<"n="<<s.n<<"\tl="<<s.l<<"\tm="<<s.m<<"\t\t"<<s.weight;
+	return cout<<"n="<<s.n<<"\tr="<<(s.n-1-s.l)<<"\tl="<<s.l<<"\tm="<<s.m<<"\t\t"<<s.weight;
 }
 vector<Eigenstate> eigen;
 Vector3 rMu,rSigma,waveNumber;
@@ -37,6 +38,8 @@ RadialWave *currentRadial;
 SphericalHarmonic *currentSpherical;
 double currentEnergy;
 Complex f0(double rho,double theta,double phi) {
+	//n=1 l=0 m=0
+	//return Complex(exp(-rho)*sqrt(3.0/2/acos(-1.0))*sin(theta),0)*Complex(cos(phi),sin(phi));
 	return currentSpherical->calc(theta,phi)*currentRadial->calc(rho);
 }
 Complex f1(double rho,double theta,double phi,double t) {
@@ -45,12 +48,20 @@ Complex f1(double rho,double theta,double phi,double t) {
 	Complex ret(0,0);
 	int i;
 	for (i=0;i<(int)eigen.size();i++) {
+		if (eigen[i].ignored) {
+			continue;
+		}
 		Complex cur=eigen[i].fS->calc(theta,phi)*eigen[i].fR->calc(rho);
 		double p=omega*t*eigen[i].energy;
 		cur=cur*Complex(cos(p),sin(p));
 		ret=ret+cur;
 	}
 	return ret*factor;
+}
+void buildSommerfeld(int n) {
+	rMu=Vector3(n*n,0,0);
+	rSigma=Vector3(2,2,2);
+	waveNumber=Vector3(0,1.0/n,0);
 }
 void createWaveFunction() {
 	int n,l,m;
@@ -67,8 +78,11 @@ void decompose() {
 	for (i=0;i<(int)eigen.size();i++) {
 		currentRadial=eigen[i].fR;
 		currentSpherical=eigen[i].fS;
-		Complex z=integrateNormal3(f0,rMu,rSigma,waveNumber);
+		Complex z=integrateSqrtNormal3(f0,rMu,rSigma,waveNumber);
 		eigen[i].weight=z;
+		if (z.length()<=1e-5) {
+			eigen[i].ignored=true;
+		}
 	}
 
 }
@@ -96,16 +110,37 @@ void writeWeight() {
 }
 
 int main(int argc, char **argv) {
-	factor=5;
-	rMu=Vector3(4,0,0);
-	rSigma=Vector3(0.1,0.1,0.1);
-	waveNumber=Vector3(0,-10,0);
+	using namespace std;
+	if (0) {
+		RadialWave(2,0);
+		RadialWave r(2,1);
+		SphericalHarmonic s1(1,-1);
+		SphericalHarmonic s2(1,1);
+		double x,y,z;
+		while (cin>>x>>y>>z) {
+			double rho=sqrt(x*x+y*y+z*z);
+			double theta,phi;
+			if (rho==0) {
+				theta=0;
+				phi=0;
+			}
+			else {
+				theta=acos(z/rho);
+				phi=atan2(y,x);
+			}
+			cout<<r.calc(rho)*s1.calc(theta,phi)<<endl;
+			cout<<r.calc(rho)*s2.calc(theta,phi)<<endl;
+		}
+		return 0;
+	}
+	factor=10;
+	buildSommerfeld(2);
 	createWaveFunction();
 	decompose();
 	//k[0]=Complex(1,0);
 	writeWeight();
-	const int w=200,h=200,l=720;
-	SphericalFunctionPlotter sp(f1,w,h,0.02,l,"/home/cbx/Dropbox/nodejs/web/buffer/out.mp4","jpeg");
+	const int w=100,h=100,l=8;
+	SphericalFunctionPlotter sp(f1,w,h,0.01,l,"/home/cbx/Dropbox/nodejs/web/buffer/out.mp4","jpeg");
 	return 0;
 };
 

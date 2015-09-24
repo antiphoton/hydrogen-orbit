@@ -161,6 +161,9 @@ double Complex::angle() const {
 Complex Complex::operator ! () const {
 	return Complex(x,-y);
 }
+Complex operator * (double c1,const Complex &c2) {
+	return Complex(c1*c2.x,c1*c2.y);
+}
 Complex operator * (const Complex &c1,double c2) {
 	return Complex(c1.x*c2,c1.y*c2);
 }

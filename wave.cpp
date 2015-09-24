@@ -74,7 +74,7 @@ SphericalHarmonic::SphericalHarmonic(int l,int m):l(l),m(m) {
 	double c=simpson(*this,0,PI);
 	a=1/sqrt(c);
 	if (m<0&&(-m)%2==1) {
-		//a=-a;
+		a=-a;
 	}
 }
 SphericalHarmonic::~SphericalHarmonic() {
@@ -88,4 +88,3 @@ double SphericalHarmonic::integrated(double theta) const {
 	double y=a*pal->calc(cos(theta));
 	return (2*PI)*sin(theta)*y*y;
 }
-

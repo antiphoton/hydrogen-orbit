@@ -59,6 +59,7 @@ struct Complex {
 	double angle() const;
 	Complex operator ! () const;
 };
+Complex operator * (double c1,const Complex &c2);
 Complex operator * (const Complex &c1,double c2);
 Complex operator * (const Complex &c1,const Complex &c2);
 Complex operator + (const Complex &c1,const Complex &c2);
