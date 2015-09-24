@@ -54,13 +54,14 @@ Complex f1(double rho,double theta,double phi,double t) {
 		Complex cur=eigen[i].fS->calc(theta,phi)*eigen[i].fR->calc(rho);
 		double p=omega*t*eigen[i].energy;
 		cur=cur*Complex(cos(p),sin(p));
+		cur=eigen[i].weight*cur;
 		ret=ret+cur;
 	}
 	return ret*factor;
 }
 void buildSommerfeld(int n) {
 	rMu=Vector3(n*n,0,0);
-	rSigma=Vector3(2,2,2);
+	rSigma=Vector3(1,1,1);
 	waveNumber=Vector3(0,1.0/n,0);
 }
 void createWaveFunction() {
@@ -111,36 +112,14 @@ void writeWeight() {
 
 int main(int argc, char **argv) {
 	using namespace std;
-	if (0) {
-		RadialWave(2,0);
-		RadialWave r(2,1);
-		SphericalHarmonic s1(1,-1);
-		SphericalHarmonic s2(1,1);
-		double x,y,z;
-		while (cin>>x>>y>>z) {
-			double rho=sqrt(x*x+y*y+z*z);
-			double theta,phi;
-			if (rho==0) {
-				theta=0;
-				phi=0;
-			}
-			else {
-				theta=acos(z/rho);
-				phi=atan2(y,x);
-			}
-			cout<<r.calc(rho)*s1.calc(theta,phi)<<endl;
-			cout<<r.calc(rho)*s2.calc(theta,phi)<<endl;
-		}
-		return 0;
-	}
-	factor=10;
+	factor=7;
 	buildSommerfeld(2);
 	createWaveFunction();
 	decompose();
 	//k[0]=Complex(1,0);
 	writeWeight();
-	const int w=100,h=100,l=8;
-	SphericalFunctionPlotter sp(f1,w,h,0.01,l,"/home/cbx/Dropbox/nodejs/web/buffer/out.mp4","jpeg");
+	const int w=150,h=150,l=120;
+	SphericalFunctionPlotter sp(f1,w,h,0.05,l,"/home/cbx/Dropbox/nodejs/web/buffer/out.mp4","jpeg");
 	return 0;
 };
 
