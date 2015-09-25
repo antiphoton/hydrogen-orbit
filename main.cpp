@@ -27,6 +27,7 @@ struct Eigenstate {
 	Eigenstate(int n,int l,int m):n(n),l(l),m(m),weight(0,0),ignored(false) {
 		fR=new RadialWave(n,l);
 		fS=new SphericalHarmonic(l,m);
+		energy=-1.0/n/n;
 	}
 };
 ostream & operator << (ostream &cout,const Eigenstate &s) {
