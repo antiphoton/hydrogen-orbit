@@ -50,10 +50,11 @@ struct Vector3 {
 	Vector3(const Vector3 &v);
 	double length() const;
 };
+Vector3 operator * (const Vector3 &v1,double v2);
 std::ostream & operator << (std::ostream & cout,const Vector3 &v);
 struct Complex {
 	double x,y;
-	Complex (double x,double y);
+	Complex (double x=0,double y=0);
 	Complex (const Complex &c);
 	double length() const;
 	double angle() const;
@@ -73,3 +74,15 @@ struct Quaternion {
 Quaternion operator - (const Quaternion &q);
 Quaternion operator * (const Quaternion &q1,const Quaternion &q2);
 
+class WavePacket {
+	public:
+		WavePacket(const Vector3 &mu,const Vector3 &sigma,const Vector3 &number);
+		Vector3 mu,sigma,number;
+};
+WavePacket sommerfeld(int n);
+
+struct Integrated11 {
+	virtual double integrated(double) const=0;
+};
+double simpson(const Integrated11 &f,double a,double b,double eps=1e-9);
+double simpsonHalfInf(const Integrated11 &f,double eps=1e-9);

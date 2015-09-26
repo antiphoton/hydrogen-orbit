@@ -17,27 +17,10 @@ double getRandomExponential(double k=1) {
 	return 1/k*log(1/(1-getRandom()));
 }
 
-inline double parabolaIntegrate(const Function11 &f,double a,double b) {
-	return (f.integrated(a)+f.integrated((a+b)/2)*4+f.integrated(b))*(b-a)/6;
-}
-double simpson(const Function11 &f,double a,double b,double eps,double sT) {
-	double c=(a+b)/2;
-	double sL=parabolaIntegrate(f,a,c);
-	double sR=parabolaIntegrate(f,c,b);
-	if (fabs(sL+sR-sT)<=15*eps) {
-		return sL+sR+(sL+sR-sT)/15;
-	}
-	else {
-		return simpson(f,a,c,eps/2,sL)+simpson(f,c,b,eps/2,sR);
-	}
-}
-double simpson(const Function11 &f,double a,double b,double eps) {
-	return simpson(f,a,b,eps,parabolaIntegrate(f,a,b));
-}
-Complex integrateSqrtNormal3(Complex (*f)(double r,double theta,double phi),const Vector3 &pMu,Vector3 pSigma,const Vector3 &waveNumber,double eps) {
-	pSigma.x*=sqrt(2);
-	pSigma.y*=sqrt(2);
-	pSigma.z*=sqrt(2);
+Complex integrateSqrtNormal3(Complex (*f)(double r,double theta,double phi),const WavePacket &wave,double eps) {
+	const Vector3 pSigma=wave.sigma*sqrt(2);
+	const Vector3 &pMu=wave.mu;
+	const Vector3 &waveNumber=wave.number;
 	srand(time(0));
 	double ansX1=0,ansY1=0;
 	double ansX2=0,ansY2=0;

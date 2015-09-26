@@ -4,6 +4,7 @@
 #include<gif_lib.h>
 #include<jpeglib.h>
 #include"mymath.h"
+#include"wave.h"
 class GifMaker {
 	public:
 	GifMaker(int width,int height,int nFrame,const std::string &filename);
@@ -39,5 +40,18 @@ class SphericalFunctionPlotter {
 	static const int LUMA_WIDTH=1920;
 	long *lumaStats;
 };
+class WaveFunctionPlotter {
+	public:
+		WaveFunctionPlotter(const BasisSet &wave,int width,int height,double zoom,int nFrame,const std::string &filename,int fps=24);
+		~WaveFunctionPlotter();
+		void addViewPort(Rect2 screen,Quaternion camera);
+		void plot();
+	private:
+	const int height,width,depth,nFrame;
+	std::vector< std::pair<Rect2,Quaternion> > views;
+	Vector3 zoom3;
+	ParallelHistogram lumaHist;
+};
+
 
 void test_render();

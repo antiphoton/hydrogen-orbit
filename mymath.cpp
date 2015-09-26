@@ -145,6 +145,9 @@ Vector3::Vector3(const Vector3 &v) {
 double Vector3::length() const {
 	return sqrt(x*x+y*y+z*z);
 }
+Vector3 operator * (const Vector3 &v1,double v2) {
+	return Vector3(v1.x*v2,v1.y*v2,v1.z*v2);
+}
 std::ostream & operator << (std::ostream & cout,const Vector3 &v) {
 	return cout<<"("<<v.x<<","<<v.y<<","<<v.z<<")";
 }
@@ -206,3 +209,31 @@ Quaternion operator * (const Quaternion &q1,const Quaternion &q2) {
 		q1.w*q2.z+q1.z*q2.w+q1.x*q2.y-q1.y*q2.x
 	);
 }
+WavePacket::WavePacket(const Vector3 &mu,const Vector3 &sigma,const Vector3 &number):mu(mu),sigma(sigma),number(number) {
+}
+WavePacket sommerfeld(int n) {
+	return WavePacket(
+		Vector3(n*n,0,0),
+		Vector3(1,1,1),
+		Vector3(0,1.0/n,0)
+	);
+}
+
+inline double parabolaIntegrate(const Integrated11 &f,double a,double b) {
+	return (f.integrated(a)+f.integrated((a+b)/2)*4+f.integrated(b))*(b-a)/6;
+}
+double simpson(const Integrated11 &f,double a,double b,double eps,double sT) {
+	double c=(a+b)/2;
+	double sL=parabolaIntegrate(f,a,c);
+	double sR=parabolaIntegrate(f,c,b);
+	if (fabs(sL+sR-sT)<=15*eps) {
+		return sL+sR+(sL+sR-sT)/15;
+	}
+	else {
+		return simpson(f,a,c,eps/2,sL)+simpson(f,c,b,eps/2,sR);
+	}
+}
+double simpson(const Integrated11 &f,double a,double b,double eps) {
+	return simpson(f,a,b,eps,parabolaIntegrate(f,a,b));
+}
+

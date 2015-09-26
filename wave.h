@@ -1,4 +1,5 @@
 #pragma once
+#include"mymath.h"
 struct Legendre {
 	int n;
 	Polynomial a;
@@ -19,17 +20,33 @@ struct RadialWave {
 	double calc(double rho) const;
 	double integrated(double x) const ;
 };
-struct SphericalHarmonic:Function11 {
+struct SphericalHarmonic:Integrated11 {
 	double a;
 	int l,m;
 	AssociatedLegendre *pal;
 	SphericalHarmonic(int l,int m);
 	~SphericalHarmonic();
-	Complex calc(double theta,double phi) const ;
+	double calc(double theta) const ;
 	double integrated(double x) const;
 };
-struct Hydrogen {
-	int n,l,m;
-	Hydrogen(int n,int l,int m);
+class BasisSet {
+	public:
+		struct Eigenstate {
+			int n,l,m;
+			Eigenstate(int n,int l,int m);
+			RadialWave *fR;
+			SphericalHarmonic *fS;
+			Complex weight;
+			double energy;
+		};
+		BasisSet(int maxN);
+		void project(const WavePacket &wave);
+		int getSize() const;
+		void getEnergy(double *a) const;
+		void getValueByCartesian(Complex *a,const double x,const double y,const double z) const;
+		void writeWeight() const;
+		~BasisSet();
+	private:
+		std::vector<Eigenstate> v;
 };
 

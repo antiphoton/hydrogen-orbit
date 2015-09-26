@@ -293,3 +293,49 @@ void SphericalFunctionPlotter::writeStats() {
 		}
 	}
 }
+
+
+WaveFunctionPlotter::WaveFunctionPlotter(const BasisSet &wave,int width,int height,double zoom,int nFrame,const std::string &filename,int fps):height(height),width(width),depth(sqrt(height*width)),nFrame(nFrame),lumaHist(true,true,1e-10,1e10,1920,"output/luma.txt") {
+	if (width<=height) {
+		zoom3=Vector3(zoom,zoom/height*width,0);
+	}
+	else {
+		zoom3=Vector3(zoom/width*height,zoom,0);
+	}
+	zoom3.z=sqrt(zoom3.x*zoom3.y);
+	system("rm output/*.jpg 2>/dev/null");
+}
+WaveFunctionPlotter::~WaveFunctionPlotter() {
+	if (views.size()==0) {
+		addViewPort(Rect2(0,0,0.5,0.5),Quaternion(Vector3(0,1,1),acos(-1.0)/180*180));
+		addViewPort(Rect2(0,0.5,0.5,1),Quaternion(Vector3(0,0,1),acos(-1.0)/180*180));
+		addViewPort(Rect2(0.5,0,1,0.5),Quaternion(Vector3(1,1,1),acos(-1.0)/180*240));
+		addViewPort(Rect2(0.5,0.5,1,1),Quaternion(Vector3(0.732050807,1.767326988,3.414213562),acos(-1.0)/180*220));
+	}
+	plot();
+}
+void WaveFunctionPlotter::addViewPort(Rect2 screen,Quaternion camera) {
+	if (screen.min.x<0) {
+		screen.min.x=0;
+	}
+	if (screen.min.y<0) {
+		screen.min.y=0;
+	}
+	if (screen.max.x>1) {
+		screen.max.x=1;
+	}
+	if (screen.max.y>1) {
+		screen.max.y=1;
+	}
+	if (screen.min.x>=screen.max.x) {
+		return ;
+	}
+	if (screen.min.y>=screen.max.y) {
+		return ;
+	}
+	views.push_back(make_pair(screen,-camera));
+}
+void WaveFunctionPlotter::plot() {
+	MpiSharedArray<Complex> a(10);
+}
+

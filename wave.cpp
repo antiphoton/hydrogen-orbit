@@ -1,6 +1,7 @@
 #include<math.h>
 #include<stdio.h>
 #include<iostream>
+#include<fstream>
 #include"mymath.h"
 #include"mympi.h"
 #include"monte_carlo.h"
@@ -80,11 +81,95 @@ SphericalHarmonic::SphericalHarmonic(int l,int m):l(l),m(m) {
 SphericalHarmonic::~SphericalHarmonic() {
 	delete pal;
 }
-Complex SphericalHarmonic::calc(double theta,double phi) const {
-	double y=a*pal->calc(cos(theta));
-	return Complex(y*cos(m*phi),y*sin(m*phi));
+double SphericalHarmonic::calc(double theta) const {
+	return a*pal->calc(cos(theta));
 }
 double SphericalHarmonic::integrated(double theta) const {
 	double y=a*pal->calc(cos(theta));
 	return (2*PI)*sin(theta)*y*y;
 }
+BasisSet::Eigenstate::Eigenstate(int n,int l,int m):n(n),l(l),m(m) {
+	fR=new RadialWave(n,l);
+	fS=new SphericalHarmonic(l,m);
+	energy=-1.0/n/n;
+}
+BasisSet::BasisSet(int maxN) {
+	int n,l,m;
+	for (n=1;n<=maxN;n++) {
+		for (l=0;l<n;l++) {
+			for (m=-l;m<=l;m++) {
+				v.push_back(Eigenstate(n,l,m));
+			}
+		}
+	}
+}
+namespace toBeComposed {
+	RadialWave *currentRadial;
+	SphericalHarmonic *currentSpherical;
+	Complex f0(double rho,double theta,double phi) {
+		return currentSpherical->calc(theta)*currentRadial->calc(rho)*Complex(cos(phi),sin(phi));
+	}
+};
+void BasisSet::project(const WavePacket &wave) {
+	int n=v.size();
+	int i;
+	for (i=0;i<n;i++) {
+		toBeComposed::currentRadial=v[i].fR;
+		toBeComposed::currentSpherical=v[i].fS;
+		Complex z=integrateSqrtNormal3(toBeComposed::f0,wave);
+		v[i].weight=z;
+	}
+}
+int BasisSet::getSize() const {
+	return v.size();
+}
+void BasisSet::getEnergy(double *a) const {
+	int n=v.size();
+	int i;
+	for (i=0;i<n;i++) {
+		a[i]=v[i].energy;
+	}
+}
+void BasisSet::getValueByCartesian(Complex *a,const double x,const double y,const double z) const {
+	int n=v.size();
+	double rho,theta,phi;
+	rho=sqrt(x*x+y*y+z*z);
+	if (rho==0) {
+		theta=0;
+		phi=0;
+	}
+	else {
+		theta=acos(z/rho);
+		phi=atan2(y,x);
+	}
+	int i;
+	for (i=0;i<n;i++) {
+		a[i]=v[i].fS->calc(rho)*v[i].fR->calc(theta)*Complex(cos(phi),sin(phi));
+	}
+}
+std::ostream & operator << (std::ostream &cout,const BasisSet::Eigenstate &s) {
+	return cout<<"n="<<s.n<<"\tr="<<(s.n-1-s.l)<<"\tl="<<s.l<<"\tm="<<s.m;
+}
+void BasisSet::writeWeight() const {
+	int n=v.size();
+	int *a=new int[n];
+	int i,j,k;
+	for (i=0;i<n;i++) {
+		a[i]=i;
+	}
+	for (i=0;i<n;i++) {
+		for (j=i+1;j<n;j++) {
+			if (v[a[i]].weight.length()<v[a[j]].weight.length()) {
+				k=a[i];
+				a[i]=a[j];
+				a[j]=k;
+			}
+		}
+	}
+	std::ofstream fout("output/weight.txt");
+	for (i=0;i<n;i++) {
+		fout<<v[a[i]]<<"\t"<<v[i].weight<<endl;
+	}
+	delete[] a;
+}
+
