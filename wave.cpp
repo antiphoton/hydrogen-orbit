@@ -81,8 +81,8 @@ SphericalHarmonic::SphericalHarmonic(int l,int m):l(l),m(m) {
 SphericalHarmonic::~SphericalHarmonic() {
 	delete pal;
 }
-double SphericalHarmonic::calc(double theta) const {
-	return a*pal->calc(cos(theta));
+Complex SphericalHarmonic::calc(double theta,double phi) const {
+	return a*pal->calc(cos(theta))*Complex(cos(m*phi),sin(m*phi));
 }
 double SphericalHarmonic::integrated(double theta) const {
 	double y=a*pal->calc(cos(theta));
@@ -103,11 +103,13 @@ BasisSet::BasisSet(int maxN) {
 		}
 	}
 }
+BasisSet::~BasisSet() {
+}
 namespace toBeComposed {
 	RadialWave *currentRadial;
 	SphericalHarmonic *currentSpherical;
 	Complex f0(double rho,double theta,double phi) {
-		return currentSpherical->calc(theta)*currentRadial->calc(rho)*Complex(cos(phi),sin(phi));
+		return currentSpherical->calc(theta,phi)*currentRadial->calc(rho);
 	}
 };
 void BasisSet::project(const WavePacket &wave) {
@@ -130,7 +132,10 @@ void BasisSet::getEnergy(double *a) const {
 		a[i]=v[i].energy;
 	}
 }
-void BasisSet::getValueByCartesian(Complex *a,const double x,const double y,const double z) const {
+void BasisSet::getValueByCartesian(Complex *a,const Vector3 &p) const {
+	const double &x=p.x;
+	const double &y=p.y;
+	const double &z=p.z;
 	int n=v.size();
 	double rho,theta,phi;
 	rho=sqrt(x*x+y*y+z*z);
@@ -144,7 +149,7 @@ void BasisSet::getValueByCartesian(Complex *a,const double x,const double y,cons
 	}
 	int i;
 	for (i=0;i<n;i++) {
-		a[i]=v[i].fS->calc(rho)*v[i].fR->calc(theta)*Complex(cos(phi),sin(phi));
+		a[i]=v[i].fR->calc(rho)*v[i].fS->calc(theta,phi)*v[i].weight;
 	}
 }
 std::ostream & operator << (std::ostream &cout,const BasisSet::Eigenstate &s) {
@@ -159,7 +164,7 @@ void BasisSet::writeWeight() const {
 	}
 	for (i=0;i<n;i++) {
 		for (j=i+1;j<n;j++) {
-			if (v[a[i]].weight.length()<v[a[j]].weight.length()) {
+			if (v[a[i]].weight.lengthSqr()<v[a[j]].weight.lengthSqr()) {
 				k=a[i];
 				a[i]=a[j];
 				a[j]=k;
@@ -168,7 +173,7 @@ void BasisSet::writeWeight() const {
 	}
 	std::ofstream fout("output/weight.txt");
 	for (i=0;i<n;i++) {
-		fout<<v[a[i]]<<"\t"<<v[i].weight<<endl;
+		fout<<v[a[i]]<<"\t"<<v[a[i]].weight<<endl;
 	}
 	delete[] a;
 }

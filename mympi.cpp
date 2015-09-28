@@ -24,6 +24,9 @@ MpiGlobal::~MpiGlobal() {
 bool MpiGlobal::head() const {
 	return rank==0;
 }
+bool MpiGlobal::myDuty(int i) const {
+	return i%(size-1)==rank-1;
+}
 MpiGlobal mpiGlobal;
 MpiChecker::MpiChecker() {
 	if (!(mpiGlobal.size>1)) {
@@ -248,16 +251,20 @@ void ParallelHistogram::tip(double x) {
 	}
 	a[i]++;
 }
+void ParallelHistogram::writeRecommand(int depth) {
+	merge();
+	write(depth);
+}
 void ParallelHistogram::merge() {
 	if (!mpiGlobal.head()) {
-		MPI_Send(a,count,MPI_LONG,0,MPI_HIST_MERGE,MPI_COMM_WORLD);
+		MPI_Send(a,count*8,MPI_CHAR,0,MPI_HIST_MERGE,MPI_COMM_WORLD);
 	}
 	else {
 		MPI_Status mpiStat;
 		int i,j;
 		long *buffer=new long[count];
 		for (i=1;i<mpiGlobal.size;i++) {
-			MPI_Recv(&buffer,count,MPI_LONG,MPI_ANY_SOURCE,MPI_HIST_MERGE,MPI_COMM_WORLD,&mpiStat);
+			MPI_Recv(buffer,count*8,MPI_CHAR,MPI_ANY_SOURCE,MPI_HIST_MERGE,MPI_COMM_WORLD,&mpiStat);
 			for (j=0;j<count;j++) {
 				a[j]+=buffer[j];
 			}
@@ -274,14 +281,18 @@ void ParallelHistogram::merge() {
 			sum1+=x*a[i];
 			sum2+=x*x*a[i];
 		}
-		_mu=sum1/total;
-		_sigma=sqrt(sum2/total-_mu*_mu);
+		mu=sum1/total;
+		sigma=sqrt(sum2/total-mu*mu);
 	}
 };
-double ParallelHistogram::mu() const {
-	return _mu;
+void ParallelHistogram::write(int depth) const {
+	if (!mpiGlobal.head()) {
+		return ;
+	}
+	puts("Recommended factor");
+	int i;
+	for (i=0;i<3;i++) {
+		printf("%8.3f%c",sqrt((i+1)/(mu+sigma/sqrt(depth))),i<3-1?'\t':'\n');
+	}
+	
 }
-double ParallelHistogram::sigma() const {
-	return _sigma;
-}
-

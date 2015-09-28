@@ -17,6 +17,7 @@ class MpiGlobal {
 		MpiGlobal();
 		~MpiGlobal();
 		bool head() const;
+		bool myDuty(int i) const;
 		int size,rank;
 	private:
 		static int count;
@@ -41,9 +42,42 @@ template<typename T> class MpiSharedArray:MpiSharedMemory {
 	public:
 		MpiSharedArray(int size):MpiSharedMemory(sizeof(T)*size) {
 		}
-		T & operator [] (int i) {
-			return *((T*)p+i);
+		inline T & operator [] (int i) {
+			return *address(i);
 		}
+		inline T * address(int i=0) {
+			return (T*)p+i;
+		}
+};
+template<typename T> class MpiSharedArray2:MpiSharedMemory {
+	public:
+		MpiSharedArray2(int s1,int s2):MpiSharedMemory(sizeof(T)*s1*s2),s1(s1),s2(s2) {
+		}
+		inline T * address(int i1,int i2) {
+			return (T*)p+i1*s2+i2;
+		}
+	private:
+		const int s1,s2;
+};
+template<typename T> class MpiSharedArray3:MpiSharedMemory {
+	public:
+		MpiSharedArray3(int s1,int s2,int s3):MpiSharedMemory(sizeof(T)*s1*s2*s3),s1(s1),s2(s2),s3(s3) {
+		}
+		inline T * address(int i1,int i2,int i3) {
+			return (T*)p+i1*(s2*s3)+i2*s3+i3;
+		}
+	private:
+		const int s1,s2,s3;
+};
+template<typename T> class MpiSharedArray4:MpiSharedMemory {
+	public:
+		MpiSharedArray4(int s1,int s2,int s3,int s4):MpiSharedMemory(sizeof(T)*s1*s2*s3*s4),s1(s1),s2(s2),s3(s3),s4(s4) {
+		}
+		inline T * address(int i1,int i2,int i3,int i4) {
+			return (T*)p+i1*(s2*s3*s4)+i2*(s3*s4)+i3*s4+i4;
+		}
+	private:
+		const int s1,s2,s3,s4;
 };
 class SingleThreadLocker {
 	public:
@@ -80,18 +114,17 @@ class ParallelHistogram {
 		ParallelHistogram(const bool logScale,const bool clamped,const double min,const double max,const int count,const std::string &filename);
 		~ParallelHistogram();
 		void tip(double x);
-		double mu() const;
-		double sigma() const;
+		void writeRecommand(int depth);
 	private:
 		void merge();
-		void write() const;
+		void write(int depth) const;
 		const bool logScale;
 		const bool clamped;
 		const double min,max;
 		const int count;
 		const std::string filename;
 		long *a;
-		double _mu,_sigma;
+		double mu,sigma;
 		MpiChecker mpiChecker;
 };
 

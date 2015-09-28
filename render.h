@@ -20,38 +20,27 @@ class GifMaker {
 	int *duration;
 };
 bool writeJpegFile(unsigned char *data,int width,int height,const char *filename,int quality=100);
-class SphericalFunctionPlotter {
-	public:
-	SphericalFunctionPlotter(Complex (*f)(double,double,double,double),int width,int height,double zoom,int nFrame,const std::string &filename,const std::string &filetype,int fps=24);
-	~SphericalFunctionPlotter();
-	void addViewPort(Rect2 screen,Quaternion camera);
-	private:
-	void plot();
-	void writeStats();
-	std::vector< std::pair<Rect2,Quaternion> > views;
-	Complex (*f)(double r,double theta,double phi,double t);
-	Vector3 zoom3;
-	int width,height,depth,nFrame;
-	const std::string filename;
-	const bool isGif,isJpeg;
-	GifMaker *gif;
-	const int fps;
-	static const double LUMA_MIN=1e-10,LUMA_MAX=1e10;
-	static const int LUMA_WIDTH=1920;
-	long *lumaStats;
-};
 class WaveFunctionPlotter {
 	public:
-		WaveFunctionPlotter(const BasisSet &wave,int width,int height,double zoom,int nFrame,const std::string &filename,int fps=24);
+		WaveFunctionPlotter(const BasisSet * const pWave,int width,int height,double zoom,int nFrame,double frequency,double globalFactor,const std::string &filename,int fps=24);
 		~WaveFunctionPlotter();
 		void addViewPort(Rect2 screen,Quaternion camera);
-		void plot();
+		void calcPixel();
+		void writeStats();
+		void writeJpeg();
+		void makeVideo();
 	private:
+	const BasisSet * const pWave;
 	const int height,width,depth,nFrame;
+	const double frequency;
+	const double globalFactor;
 	std::vector< std::pair<Rect2,Quaternion> > views;
 	Vector3 zoom3;
 	ParallelHistogram lumaHist;
+	MpiSharedArray4<unsigned char> pixelData;
+	const std::string filename;
+	const int fps;
 };
 
 
-void test_render();
+

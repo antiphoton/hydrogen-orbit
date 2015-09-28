@@ -1,6 +1,7 @@
 #include<math.h>
 #include<string.h>
 #include<stdio.h>
+#include<algorithm>
 #include<cstdlib>
 #include<ctime>
 #include<iostream>
@@ -13,7 +14,6 @@ using std::string;
 using std::vector;
 using std::make_pair;
 const double PI=acos(-1.0);
-const int FPS=30;
 GifMaker::GifMaker(int width,int height,int nFrame,const string &filename):width(width),height(height),nFrame(nFrame),filename(filename) {
 	red=new unsigned char[width*height*nFrame];
 	green=new unsigned char[width*height*nFrame];
@@ -115,187 +115,9 @@ bool writeJpegFile(unsigned char *data,int width,int height,const char *filename
 
 	return true;
 }
-SphericalFunctionPlotter::SphericalFunctionPlotter(Complex (*f)(double,double,double,double),int width,int height,double zoom,int nFrame,const string &filename,const string &filetype,int fps):f(f),width(width),height(height),nFrame(nFrame),filename(filename),isGif(filetype=="gif"),isJpeg(filetype=="jpeg"),fps(fps) {
-	if (width<=height) {
-		zoom3=Vector3(zoom,zoom/height*width,0);
-	}
-	else {
-		zoom3=Vector3(zoom/width*height,zoom,0);
-	}
-	zoom3.z=sqrt(zoom3.x*zoom3.y);
-	depth=sqrt(width*height);
-	if (isGif) {
-		gif=new GifMaker(width,height,nFrame,filename);
-	}
-	if (isJpeg) {
-		system("rm output/*.jpg 2>/dev/null");
-		lumaStats=new long[LUMA_WIDTH];
-		memset(lumaStats,0,sizeof(long)*LUMA_WIDTH);
-	}
-}
-SphericalFunctionPlotter::~SphericalFunctionPlotter() {
-	if (views.size()==0) {
-		addViewPort(Rect2(0,0,0.5,0.5),Quaternion(Vector3(0,1,1),acos(-1.0)/180*180));
-		addViewPort(Rect2(0,0.5,0.5,1),Quaternion(Vector3(0,0,1),acos(-1.0)/180*180));
-		addViewPort(Rect2(0.5,0,1,0.5),Quaternion(Vector3(1,1,1),acos(-1.0)/180*240));
-		addViewPort(Rect2(0.5,0.5,1,1),Quaternion(Vector3(0.732050807,1.767326988,3.414213562),acos(-1.0)/180*220));
-	}
-	plot();
-	writeStats();
-	if (isGif) {
-		delete gif;
-	}
-	if (isJpeg) {
-		if (mpiGlobal.rank==0) {
-			static char cmd[1024];
-			sprintf(cmd,"ffmpeg -y -framerate %d -i output/img_%%05d.jpg -c:v libx264 -r 30 -pix_fmt yuv420p %s 1>/dev/null 2>&1",fps,filename.c_str());
-			std::system(cmd);
-			//system("rm output/*.jpg");
-		}
-		delete[] lumaStats;
-	}
-}
-void SphericalFunctionPlotter::addViewPort(Rect2 screen,Quaternion camera) {
-	if (screen.min.x<0) {
-		screen.min.x=0;
-	}
-	if (screen.min.y<0) {
-		screen.min.y=0;
-	}
-	if (screen.max.x>1) {
-		screen.max.x=1;
-	}
-	if (screen.max.y>1) {
-		screen.max.y=1;
-	}
-	if (screen.min.x>=screen.max.x) {
-		return ;
-	}
-	if (screen.min.y>=screen.max.y) {
-		return ;
-	}
-	views.push_back(make_pair(screen,-camera));
-}
-void SphericalFunctionPlotter::plot() {
-	unsigned char *data=new unsigned char[width*height*3];
-	MpiTaskManager taskManager;
-	int t;
-	for (t=0;t<nFrame;t++) {
-		int y2,x2,z2;
-		for (y2=0;y2<height;y2++) {
-			if (taskManager.isMyTask(t)) {
-				for (x2=1;x2<width;x2++) {
-					ColorRgbA color(1,1,1,1);
-					int iView;
-					for (iView=views.size()-1;iView>=0;iView--) {
-						Vector2 p1=views[iView].first.screenToClient(Vector2(1.0*x2/width,1.0*y2/height));
-						if (p1.x<0||p1.x>=1) {
-							continue;
-						}
-						if (p1.y<0||p1.y>=1) {
-							continue;
-						}
-						for (z2=0;z2<depth;z2++) {
-							Vector3 p(p1.x-0.5,0.5-p1.y,1.0*z2/depth-0.5);
-							p.x/=zoom3.x;
-							p.y/=zoom3.y;
-							p.z/=zoom3.z;
-							p=views[iView].second.rotate(p);
-							double rho,theta,phi;
-							rho=p.length();
-							if (rho>0) {
-								theta=acos(p.z/rho);
-								phi=atan2(p.y,p.x);
-							}
-							else {
-								theta=0;
-								phi=0;
-							}
-							Complex value=f(rho,theta,phi,t);
-							color=ColorRgbA(value)+color;
-							double lumaD=value.length()*value.length();
-							int lumaI;
-							if (lumaD<=0) {
-								lumaI=0;
-							}
-							else {
-								const double log10=log(10);
-								const double logMin=log(LUMA_MIN)/log10;
-								const double logMax=log(LUMA_MAX)/log10;
-								lumaD=log(lumaD)/log10;
-								lumaI=(lumaD-logMin)/(logMax-logMin)*LUMA_WIDTH;
-								if (lumaI<0) {
-									lumaI=0;
-								}
-								if (lumaI>=LUMA_WIDTH) {
-									lumaI=LUMA_WIDTH-1;
-								}
-							}
-							lumaStats[lumaI]++;
-						}
-					}
-					data[(y2*width+x2)*3+0]=color.r*255;
-					data[(y2*width+x2)*3+1]=color.g*255;
-					data[(y2*width+x2)*3+2]=color.b*255;
-				}
-			}
-			taskManager.submitSlowTask(t);
-		}
-		if (isGif) {
-			gif->setFrame(t,data,1.0/fps);
-		}
-		if (isJpeg) {
-			if (taskManager.isMyTask(t)) {
-				static char fileFinalName[256];
-				sprintf(fileFinalName,"output/img_%05d.jpg",t);
-				writeJpegFile(data,width,height,fileFinalName,100);
-			}
-			taskManager.submitQuickTask(t);
-		}
-	}
-	delete[] data;
-}
-void SphericalFunctionPlotter::writeStats() {
-	const int TAG_STATS=10;
-	if (mpiGlobal.rank!=0) {
-		MPI_Send(lumaStats,LUMA_WIDTH,MPI_LONG,0,TAG_STATS,MPI_COMM_WORLD);
-	}
-	else {
-		MPI_Status mpiStat;
-		int i,j;
-		static long buffer[LUMA_WIDTH];
-		for (i=1;i<mpiGlobal.size;i++) {
-			MPI_Recv(&buffer,LUMA_WIDTH,MPI_LONG,MPI_ANY_SOURCE,TAG_STATS,MPI_COMM_WORLD,&mpiStat);
-			for (j=0;j<LUMA_WIDTH;j++) {
-				lumaStats[j]+=buffer[j];
-			}
-		}
-		const double log10=log(10);
-		const double logMin=log(LUMA_MIN)/log10;
-		const double logMax=log(LUMA_MAX)/log10;
-		long total=0;
-		double sum1=0,sum2=0;
-		for (i=0;i<LUMA_WIDTH;i++) {
-		}
-		for (i=0;i<LUMA_WIDTH;i++) {
-			double x=exp(((i+0.5)/LUMA_WIDTH*(logMax-logMin)+logMin)*log10);
-			total+=lumaStats[i];
-			sum1+=x*lumaStats[i];
-			sum2+=x*x*lumaStats[i];
-		}
-		double mu=sum1/total;
-		double sigma=sqrt(sum2/total-mu*mu);
-		mu*=depth;
-		sigma/=sqrt(depth);
-		puts("Recommended factor");
-		for (i=0;i<3;i++) {
-			printf("%8.3f%c",sqrt((i+1)/(mu+sigma)),i<3-1?'\t':'\n');
-		}
-	}
-}
 
 
-WaveFunctionPlotter::WaveFunctionPlotter(const BasisSet &wave,int width,int height,double zoom,int nFrame,const std::string &filename,int fps):height(height),width(width),depth(sqrt(height*width)),nFrame(nFrame),lumaHist(true,true,1e-10,1e10,1920,"output/luma.txt") {
+WaveFunctionPlotter::WaveFunctionPlotter(const BasisSet * const pWave,int width,int height,double zoom,int nFrame,double frequency,double globalFactor,const std::string &filename,int fps):pWave(pWave),height(height),width(width),depth(sqrt(height*width)),nFrame(nFrame),frequency(frequency),globalFactor(globalFactor),lumaHist(true,true,1e-10,1e10,1920,"output/luma.txt"),pixelData(nFrame,height,width,3),filename(filename),fps(fps) {
 	if (width<=height) {
 		zoom3=Vector3(zoom,zoom/height*width,0);
 	}
@@ -312,7 +134,13 @@ WaveFunctionPlotter::~WaveFunctionPlotter() {
 		addViewPort(Rect2(0.5,0,1,0.5),Quaternion(Vector3(1,1,1),acos(-1.0)/180*240));
 		addViewPort(Rect2(0.5,0.5,1,1),Quaternion(Vector3(0.732050807,1.767326988,3.414213562),acos(-1.0)/180*220));
 	}
-	plot();
+	calcPixel();
+	SINGLERUN();
+	writeStats();
+	SINGLERUN();
+	writeJpeg();
+	SINGLERUN();
+	makeVideo();
 }
 void WaveFunctionPlotter::addViewPort(Rect2 screen,Quaternion camera) {
 	if (screen.min.x<0) {
@@ -335,7 +163,108 @@ void WaveFunctionPlotter::addViewPort(Rect2 screen,Quaternion camera) {
 	}
 	views.push_back(make_pair(screen,-camera));
 }
-void WaveFunctionPlotter::plot() {
-	MpiSharedArray<Complex> a(10);
+void WaveFunctionPlotter::calcPixel() {
+	using std::random_shuffle;
+	using std::pair;
+	using std::make_pair;
+	MpiSharedArray< pair<int,int> > pixelList(width*height);
+	SINGLERUN(
+		int y;
+		int x;
+		for (y=0;y<height;y++) {
+			for (x=0;x<width;x++) {
+				pixelList[y*width+x]=make_pair(y,x);
+			}
+		}
+	);
+	int nWave=pWave->getSize();
+	MpiSharedArray2<Complex> timeFactor(nFrame,nWave);
+	SINGLERUN(
+		double *pEnergy=new double[nWave];
+		pWave->getEnergy(pEnergy);
+		int iFrame;
+		int iWave;
+		for (iFrame=0;iFrame<nFrame;iFrame++) {
+			double time=1.0*iFrame/fps*frequency*2*PI;
+			for (iWave=0;iWave<nWave;iWave++) {
+				*(timeFactor.address(iFrame,iWave))=Complex(cos(pEnergy[iWave]*time),sin(pEnergy[iWave]*time));
+			}
+		}
+		delete[] pEnergy;
+	);
+	Complex *waveValue=new Complex[depth*nWave];
+	int iPixel;
+	for (iPixel=0;iPixel<width*height;iPixel++) {
+		if (!mpiGlobal.myDuty(iPixel)) {
+			continue;
+		}
+		int yCanvas=pixelList[iPixel].first;
+		int xCanvas=pixelList[iPixel].second;
+		int iView;
+		for (iView=views.size()-1;iView>=0;iView--) {
+			Vector2 pClient=views[iView].first.screenToClient(Vector2(1.0*xCanvas/width,1.0*yCanvas/height));
+			if (pClient.x<0||pClient.x>=1) {
+				continue;
+			}
+			if (pClient.y<0||pClient.y>=1) {
+				continue;
+			}
+			int zI;
+			for (zI=0;zI<depth;zI++) {
+				Vector3 pWorld(pClient.x-0.5,pClient.y-0.5,1.0*zI/depth-0.5);
+				pWorld.x/=zoom3.x;
+				pWorld.y/=zoom3.y;
+				pWorld.z/=zoom3.z;
+				pWorld=views[iView].second.rotate(pWorld);
+				pWave->getValueByCartesian(waveValue+zI*nWave,pWorld);
+			}
+			int iFrame;
+			for (iFrame=0;iFrame<nFrame;iFrame++) {
+				ColorRgbA color(1,1,1,1);
+				for (zI=0;zI<depth;zI++) {
+					int iWave;
+					Complex valueNow(0,0);
+					for (iWave=0;iWave<nWave;iWave++) {
+						valueNow+=waveValue[zI*nWave+iWave]*(*(timeFactor.address(iFrame,iWave)));
+					}
+					valueNow=valueNow*globalFactor;
+					color=ColorRgbA(valueNow)+color;
+					lumaHist.tip(valueNow.lengthSqr());
+				}
+				unsigned char *p0=pixelData.address(iFrame,yCanvas,xCanvas,0);
+				*(p0+0)=color.r*255;
+				*(p0+1)=color.g*255;
+				*(p0+2)=color.b*255;
+			}
+			break;
+		}
+	}
+	delete[] waveValue;
+}
+void WaveFunctionPlotter::writeStats() {
+	lumaHist.writeRecommand(depth);
+}
+void WaveFunctionPlotter::writeJpeg() {
+	SINGLERUN(
+		system("rm output/*.jpg 2>/dev/null");
+	);
+	char *pFileFinalName=new char[256];
+	int iFrame;
+	for (iFrame=0;iFrame<nFrame;iFrame++) {
+		if (!mpiGlobal.myDuty(iFrame)) {
+			continue;
+		}
+		sprintf(pFileFinalName,"output/img_%05d.jpg",iFrame);
+		writeJpegFile(pixelData.address(iFrame,0,0,0),width,height,pFileFinalName,100);
+	}
+	delete pFileFinalName;
+}
+void WaveFunctionPlotter::makeVideo() {
+	SINGLERUN(
+		char *cmd=new char[1024];
+		sprintf(cmd,"ffmpeg -y -framerate %d -i output/img_%%05d.jpg -c:v libx264 -r 30 -pix_fmt yuv420p %s 1>/dev/null 2>&1",fps,filename.c_str());
+		std::system(cmd);
+		delete[] cmd;
+	)
 }
 

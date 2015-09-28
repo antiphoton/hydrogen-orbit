@@ -17,22 +17,19 @@ using std::make_pair;
 using std::ostream;
 using std::pair;
 using std::vector;
-double factor=1;
 int main(int argc, char **argv) {
 	using namespace std;
-	MpiSharedArray<char> a(mpiGlobal.size);
-	int i;
-	for (i=0;i<26;i++) {
-		a[mpiGlobal.rank]='A'+i;
-		usleep(rand()*1.0/RAND_MAX*1000000);
-		SINGLERUN(
-			int j;
-			for (j=1;j<mpiGlobal.size;j++) {
-				printf("%c",a[j]);
-			}
-			puts("");
-		);
-	}
+	BasisSet wave(4);
+	wave.project(sommerfeld(2));
+	wave.writeWeight();
+	WaveFunctionPlotter plotter(&wave,
+		100,//width
+		100,//height
+		0.05,//zoom
+		72,//nFrame
+		0.2,//frequency
+		7,//globalFactor
+		"output/out.mp4");
 	return 0;
 };
 

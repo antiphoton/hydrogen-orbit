@@ -26,7 +26,7 @@ struct SphericalHarmonic:Integrated11 {
 	AssociatedLegendre *pal;
 	SphericalHarmonic(int l,int m);
 	~SphericalHarmonic();
-	double calc(double theta) const ;
+	Complex calc(double theta,double phi) const ;
 	double integrated(double x) const;
 };
 class BasisSet {
@@ -43,7 +43,7 @@ class BasisSet {
 		void project(const WavePacket &wave);
 		int getSize() const;
 		void getEnergy(double *a) const;
-		void getValueByCartesian(Complex *a,const double x,const double y,const double z) const;
+		void getValueByCartesian(Complex *a,const Vector3 &p) const;
 		void writeWeight() const;
 		~BasisSet();
 	private:

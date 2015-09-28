@@ -57,6 +57,7 @@ struct Complex {
 	Complex (double x=0,double y=0);
 	Complex (const Complex &c);
 	double length() const;
+	double lengthSqr() const;
 	double angle() const;
 	Complex operator ! () const;
 };
@@ -64,6 +65,7 @@ Complex operator * (double c1,const Complex &c2);
 Complex operator * (const Complex &c1,double c2);
 Complex operator * (const Complex &c1,const Complex &c2);
 Complex operator + (const Complex &c1,const Complex &c2);
+Complex & operator += (Complex &c1,const Complex &c2);
 std::ostream & operator << (std::ostream & cout,const Complex &c);
 struct Quaternion {
 	double w,x,y,z;
