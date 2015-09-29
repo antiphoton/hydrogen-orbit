@@ -22,7 +22,7 @@ class GifMaker {
 bool writeJpegFile(unsigned char *data,int width,int height,const char *filename,int quality=100);
 class WaveFunctionPlotter {
 	public:
-		WaveFunctionPlotter(const BasisSet * const pWave,int width,int height,double zoom,int nFrame,double frequency,double globalFactor,const std::string &filename,int fps=24);
+		WaveFunctionPlotter(const BasisSet * const pWave,int width,int height,double zoom,int nFrame,double frequency,double globalFactor,bool gray,const std::string &filename,int fps=24);
 		~WaveFunctionPlotter();
 		void addViewPort(Rect2 screen,Quaternion camera);
 		void calcPixel();
@@ -34,6 +34,7 @@ class WaveFunctionPlotter {
 	const int height,width,depth,nFrame;
 	const double frequency;
 	const double globalFactor;
+	const bool gray;
 	std::vector< std::pair<Rect2,Quaternion> > views;
 	Vector3 zoom3;
 	ParallelHistogram lumaHist;

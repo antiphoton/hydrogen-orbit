@@ -10,7 +10,7 @@ struct ColorRgbA {
 	ColorRgbA(double r=0,double g=0,double b=0,double a=0);
 	ColorRgbA(const ColorHsl &c);
 	ColorRgbA(const ColorYuv &c);
-	ColorRgbA(const Complex &c);
+	ColorRgbA(const Complex &c,bool gray=false);
 	void writeToBytes(unsigned char *p);
 };
 ColorRgbA operator + (const ColorRgbA &c1,const ColorRgbA &c2);

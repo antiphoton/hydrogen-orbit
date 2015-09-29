@@ -117,7 +117,7 @@ bool writeJpegFile(unsigned char *data,int width,int height,const char *filename
 }
 
 
-WaveFunctionPlotter::WaveFunctionPlotter(const BasisSet * const pWave,int width,int height,double zoom,int nFrame,double frequency,double globalFactor,const std::string &filename,int fps):pWave(pWave),height(height),width(width),depth(sqrt(height*width)),nFrame(nFrame),frequency(frequency),globalFactor(globalFactor),lumaHist(true,true,1e-10,1e10,1920,"output/luma.txt"),pixelData(nFrame,height,width,3),filename(filename),fps(fps) {
+WaveFunctionPlotter::WaveFunctionPlotter(const BasisSet * const pWave,int width,int height,double zoom,int nFrame,double frequency,double globalFactor,bool gray,const std::string &filename,int fps):pWave(pWave),height(height),width(width),depth(sqrt(height*width)),nFrame(nFrame),frequency(frequency),globalFactor(globalFactor),gray(gray),lumaHist(true,true,1e-10,1e10,1920,"output/luma.txt"),pixelData(nFrame,height,width,3),filename(filename),fps(fps) {
 	if (width<=height) {
 		zoom3=Vector3(zoom,zoom/height*width,0);
 	}
@@ -229,7 +229,7 @@ void WaveFunctionPlotter::calcPixel() {
 						valueNow+=waveValue[zI*nWave+iWave]*(*(timeFactor.address(iFrame,iWave)));
 					}
 					valueNow=valueNow*globalFactor;
-					color=ColorRgbA(valueNow)+color;
+					color=ColorRgbA(valueNow,gray)+color;
 					lumaHist.tip(valueNow.lengthSqr());
 				}
 				unsigned char *p0=pixelData.address(iFrame,yCanvas,xCanvas,0);

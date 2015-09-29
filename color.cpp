@@ -78,7 +78,7 @@ ColorRgbA::ColorRgbA(const ColorYuv &c):a(1) {
 	g=clip(y-cr*0.714-cb*0.344);
 	b=clip(y+cb*1.772);
 }
-ColorRgbA::ColorRgbA(const Complex &c) {
+ColorRgbA::ColorRgbA(const Complex &c,bool gray) {
 	if(c.x==0&&c.y==0) {
 		r=1;
 		g=0;
@@ -93,40 +93,46 @@ ColorRgbA::ColorRgbA(const Complex &c) {
 		a=0.5;
 		//return ;
 	}
-	static bool init=false;
-	static ColorRgbA colorMark[]={
-		ColorRgbA(0,1,0),
-		ColorRgbA(0,1,1),
-		ColorRgbA(0,0,1),
-		ColorRgbA(1,0,1),
-		ColorRgbA(1,0,0),
-		ColorRgbA(1,1,0)
-	};
-	const int N=sizeof(colorMark)/sizeof(colorMark[0]);
-	static double angleMark[N+1];
-	if (!init) {
-		init=true;
-		int i;
-		for (i=0;i<N;i++) {
-			ColorYuv a(colorMark[i]);
-			angleMark[i]=atan2(a.v-0.5,a.u-0.5);
-			if (mpiGlobal.rank==1) {
+	if (gray) {
+		static ColorRgbA ret=ColorRgbA(ColorYuv(0.5,0.5,0.5));
+		*this=ret;
+	}
+	else {
+		static bool init=false;
+		static ColorRgbA colorMark[]={
+			ColorRgbA(0,1,0),
+			ColorRgbA(0,1,1),
+			ColorRgbA(0,0,1),
+			ColorRgbA(1,0,1),
+			ColorRgbA(1,0,0),
+			ColorRgbA(1,1,0)
+		};
+		const int N=sizeof(colorMark)/sizeof(colorMark[0]);
+		static double angleMark[N+1];
+		if (!init) {
+			init=true;
+			int i;
+			for (i=0;i<N;i++) {
+				ColorYuv a(colorMark[i]);
+				angleMark[i]=atan2(a.v-0.5,a.u-0.5);
+				if (mpiGlobal.rank==1) {
+				}
 			}
+			angleMark[N]=angleMark[0]+2*PI;
 		}
-		angleMark[N]=angleMark[0]+2*PI;
+		double p=c.angle();
+		p/=2*PI;
+		p-=floor(p);
+		int i=p*N;
+		p=p*N-i;
+		if (i<0||i>=N) {
+			i=0;
+			p=0;
+		}
+		i=(i+4)%N;
+		p=angleMark[i]*(1-p)+angleMark[i+1]*p;
+		*this=ColorRgbA(ColorYuv(0.5,(cos(p)+1)/2,(sin(p)+1)/2));
 	}
-	double p=c.angle();
-	p/=2*PI;
-	p-=floor(p);
-	int i=p*N;
-	p=p*N-i;
-	if (i<0||i>=N) {
-		i=0;
-		p=0;
-	}
-	i=(i+4)%N;
-	p=angleMark[i]*(1-p)+angleMark[i+1]*p;
-	*this=ColorRgbA(ColorYuv(0.5,(cos(p)+1)/2,(sin(p)+1)/2));
 	a=c.x*c.x+c.y*c.y;
 }
 void ColorRgbA::writeToBytes(unsigned char *p) {

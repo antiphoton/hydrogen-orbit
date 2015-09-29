@@ -23,12 +23,13 @@ int main(int argc, char **argv) {
 	wave.project(sommerfeld(2));
 	wave.writeWeight();
 	WaveFunctionPlotter plotter(&wave,
-		200,//width
-		200,//height
+		500,//width
+		500,//height
 		0.05,//zoom
-		120,//nFrame
-		0.2,//frequency
+		720,//nFrame
+		0.5,//frequency
 		7,//globalFactor
+		true,//gray
 		"output/out.mp4");
 	return 0;
 };
