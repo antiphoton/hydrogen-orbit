@@ -5,8 +5,7 @@
 #include<string>
 #include<vector>
 enum MPI_TAG {
-	MPI_TASK_SLOW,
-	MPI_TASK_QUICK,
+	MPI_TASK_APPLY,
 	MPI_HIST_MERGE,
 	MPI_MEMORY_READY,
 	MPI_SYNC,
@@ -93,20 +92,16 @@ class SingleThreadLocker {
 #define SINGLERUN(f) {SingleThreadLocker __cbxLocker__; if (__cbxLocker__.myDuty()) {f}}
 class MpiTaskManager {
 	public:
-		MpiTaskManager();
+		MpiTaskManager(const std::string &tag,int count,double supposedCost);
 		~MpiTaskManager();
-		bool isMyTask(int hash);
-		void submitSlowTask(int hash);
-		void submitQuickTask(int hash);
+		int apply();
 	private:
-		void analyze(int iThread);
-		int whoShouldDo(int hash);
-		bool head;
-		long totalSlow,totalQuick;
-		long finishSlow;
-		timespec *threadTime;
-		long *threadJob,*threadDone;
-		double cost,cost2;
+		void listen();
+		void write();
+		const int count;
+		const double supposedCost;
+		const std::string tag;
+		double cost1,cost2;
 		MpiChecker mpiChecker;
 };
 class ParallelHistogram {

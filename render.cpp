@@ -193,10 +193,11 @@ void WaveFunctionPlotter::calcPixel() {
 		delete[] pEnergy;
 	);
 	Complex *waveValue=new Complex[depth*nWave];
-	int iPixel;
-	for (iPixel=0;iPixel<width*height;iPixel++) {
-		if (!mpiGlobal.myDuty(iPixel)) {
-			continue;
+	MpiTaskManager pixelManager("pixel",width*height,1);
+	while (1) {
+		int iPixel=pixelManager.apply();
+		if (iPixel==-1) {
+			break;
 		}
 		int yCanvas=pixelList[iPixel].first;
 		int xCanvas=pixelList[iPixel].second;

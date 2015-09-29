@@ -6,6 +6,7 @@
 #include<sys/shm.h>
 #include"mympi.h"
 using std::vector;
+using std::string;
 int MpiGlobal::count=0;
 MpiGlobal::MpiGlobal() {
 	if (++count>1) {
@@ -49,6 +50,149 @@ void mpiSync() {
 		MPI_Send(&x,1,MPI_INT,0,MPI_SYNC,MPI_COMM_WORLD);
 	}
 };
+void normalizeVector(vector<double> &a) {
+	int n=a.size();
+	double r=0;
+	int i;
+	for (i=0;i<n;i++) {
+		r+=a[i]*a[i];
+	}
+	r=sqrt(r);
+	for (i=0;i<n;i++) {
+		a[i]/=r;
+	}
+}
+double myTimediff(timespec t1,timespec t2) {
+	return (t1.tv_sec-t2.tv_sec)+(t1.tv_nsec-t2.tv_nsec)*1e-9;
+}
+timespec getTime() {
+	timespec now;
+	clock_gettime(CLOCK_REALTIME,&now);
+	return now;
+}
+class TaskManagerReport {
+	public:
+		TaskManagerReport();
+		~TaskManagerReport();
+		void push(const string &tag,double supposed,double actual);
+	private:
+		int n;
+		vector<string> vTag;
+		vector<double> vSupposed,vActual;
+};
+TaskManagerReport::TaskManagerReport():n(0) {
+}
+TaskManagerReport::~TaskManagerReport() {
+	if (mpiGlobal.rank!=0) {
+		return ;
+	}
+	FILE *f=fopen("output/cpuStats.txt","w");
+	normalizeVector(vSupposed);
+	normalizeVector(vActual);
+	int i;
+	for (i=0;i<n;i++) {
+		fprintf(f,"%s\t%f\t%f\n",vTag[i].c_str(),vSupposed[i],vActual[i]);
+	}
+	fclose(f);
+}
+void TaskManagerReport::push(const string &tag,double supposed,double actual) {
+	if (mpiGlobal.rank!=0) {
+		return ;
+	}
+	n++;
+	vTag.push_back(tag);
+	vSupposed.push_back(supposed);
+	vActual.push_back(actual);
+}
+MpiTaskManager::MpiTaskManager(const std::string &tag,int count,double supposedCost):count(count),supposedCost(supposedCost),tag(tag) {
+	if (mpiGlobal.rank==0) {
+		cost1=0;
+		cost2=0;
+		listen();
+	}
+}
+MpiTaskManager::~MpiTaskManager() {
+	if (mpiGlobal.rank==0) {
+		write();
+	}
+}
+int MpiTaskManager::apply() {
+	if (mpiGlobal.rank==0) {
+		return -1;
+	}
+	int x;
+	MPI_Status stat;
+	MPI_Send(&x,1,MPI_INT,0,MPI_TASK_APPLY,MPI_COMM_WORLD);
+	MPI_Recv(&x,1,MPI_INT,0,MPI_TASK_APPLY,MPI_COMM_WORLD,&stat);
+	return x;
+}
+void MpiTaskManager::listen() {
+	int nextTask=0;
+	int nFinished=0;
+	vector<bool> cpuWaiting(mpiGlobal.size,false);
+	vector<int> cpuLastTask(mpiGlobal.size,-1);
+	vector<timespec> cpuStarttime(mpiGlobal.size);
+	int i;
+	int nCpuWaiting=0;
+	while (nCpuWaiting<mpiGlobal.size-1) {
+		MPI_Status stat;
+		int ret;
+		MPI_Recv(&ret,1,MPI_INT,MPI_ANY_SOURCE,MPI_TASK_APPLY,MPI_COMM_WORLD,&stat);
+		timespec now=getTime();
+		i=stat.MPI_SOURCE;
+		if (cpuWaiting[i]) {
+			ret=-1;
+		}
+		else {
+			if (nextTask>=count) {
+				ret=-1;
+				cpuWaiting[i]=true;
+				nCpuWaiting++;
+			}
+			else {
+				ret=nextTask;
+				nextTask++;
+			}
+		}
+		if (cpuLastTask[i]!=-1) {
+			double delta=myTimediff(now,cpuStarttime[i]);
+			cost1+=delta;
+			cost2+=delta*delta;
+			nFinished++;
+		}
+		double mu;
+		if (nFinished==0) {
+			mu=supposedCost;
+		}
+		else {
+			mu=cost1/nFinished;
+		}
+		double totalStarted=0;
+		for (i=1;i<mpiGlobal.size;i++) {
+			if (cpuWaiting[i]) {
+				continue;
+			}
+			totalStarted+=myTimediff(now,cpuStarttime[i]);
+		}
+		double estimated=(mu*(count-nFinished)-totalStarted)/(mpiGlobal.size-1);
+		if (estimated<=99) {
+			printf("Estimated Remaining: %2d seconds            \r",(int)(estimated+0.5));
+		}
+		else {
+			time_t f=now.tv_sec+now.tv_nsec/1e9+estimated+0.5;
+			tm *timeinfo=localtime(&f);
+			char timeBuffer[256];
+			strftime(timeBuffer,256,"%F %X",timeinfo);
+			printf("Estiamted Time:     %s\r",timeBuffer);
+		}
+		cpuLastTask[stat.MPI_SOURCE]=ret;
+		cpuStarttime[stat.MPI_SOURCE]=now;
+		MPI_Send(&ret,1,MPI_INT,stat.MPI_SOURCE,MPI_TASK_APPLY,MPI_COMM_WORLD);
+	}
+}
+void MpiTaskManager::write() {
+
+}
 MpiSharedMemory::MpiSharedMemory(int size) {
 	int shmid;
 	if (mpiGlobal.head()) {
@@ -70,14 +214,6 @@ MpiSharedMemory::~MpiSharedMemory() {
 }
 void *MpiSharedMemory::address() const {
 	return p;
-}
-double myTimediff(timespec t1,timespec t2) {
-	return (t1.tv_sec-t2.tv_sec)+(t1.tv_nsec-t2.tv_nsec)*1e-9;
-}
-timespec getTime() {
-	timespec now;
-	clock_gettime(CLOCK_REALTIME,&now);
-	return now;
 }
 pthread_mutex_t *SingleThreadLocker::pMutex;
 bool SingleThreadLocker::staticInited=false;
@@ -125,103 +261,7 @@ SingleThreadLocker::~SingleThreadLocker() {
 		MPI_Recv(&x,1,MPI_INT,WORKING_RANK,MPI_SINGLETHREAD,MPI_COMM_WORLD,&stat);
 	}
 }
-MpiTaskManager::MpiTaskManager() {
-	head=mpiGlobal.rank==0;
-	if (!head) {
-		return ;
-	}
-	totalSlow=0;
-	totalQuick=0;
-	finishSlow=0;
-	threadTime=new timespec[mpiGlobal.size];
-	threadJob=new long[mpiGlobal.size];
-	threadDone=new long[mpiGlobal.size];
-	int i;
-	for (i=0;i<mpiGlobal.size;i++) {
-		threadTime[i]=getTime();
-		threadJob[i]=0;
-		threadDone[i]=0;
-	}
-	cost=0;
-	cost2=0;
-}
-MpiTaskManager::~MpiTaskManager() {
-	if (!head) {
-		return ;
-	}
-	MPI_Status stat;
-	int x;
-	int i;
-	for (i=0;i<totalSlow;i++) {
-		MPI_Recv(&x,1,MPI_INT,MPI_ANY_SOURCE,MPI_TASK_SLOW,MPI_COMM_WORLD,&stat);
-		analyze(x);
-	}
-	for (i=0;i<totalQuick;i++) {
-		MPI_Recv(&x,1,MPI_INT,MPI_ANY_SOURCE,MPI_TASK_QUICK,MPI_COMM_WORLD,&stat);
-	}
-	printf("\n");
-	delete[] threadTime;
-	delete[] threadJob;
-	delete[] threadDone;
-}
-void MpiTaskManager::analyze(int iThread) {
-	finishSlow++;
-	threadDone[iThread]++;
-	timespec now=getTime();
-	double delta=myTimediff(now,threadTime[iThread]);
-	threadTime[iThread]=now;
-	cost+=delta;
-	cost2+=delta*delta;
-	double mu=cost/finishSlow;
-	//double sigma=sqrt((cost2/finishSlow-mu*mu)/finishSlow);
-	double slowest=0,current;
-	int i;
-	for (i=0;i<mpiGlobal.size;i++) {
-		current=(threadJob[i]-threadDone[i])*mu;
-		current-=myTimediff(now,threadTime[i]);
-		if (current>slowest) {
-			slowest=current;
-		}
-	}
-	if (slowest<=99) {
-		printf("Estimated Remaining: %2d seconds            \r",(int)(slowest+0.5));
-	}
-	else {
-		time_t f=now.tv_sec+now.tv_nsec/1e9+slowest+0.5;
-		tm *timeinfo=localtime(&f);
-		static char timeBuffer[256];
-		strftime(timeBuffer,256,"%F %X",timeinfo);
-		printf("Estiamted Time:     %s\r",timeBuffer);
-	}
-}
-int MpiTaskManager::whoShouldDo(int hash) {
-	return hash%(mpiGlobal.size-1)+1;
-}
-bool MpiTaskManager::isMyTask(int hash) {
-	return whoShouldDo(hash)==mpiGlobal.rank;
-}
-void MpiTaskManager::submitSlowTask(int hash) {
-	if (head) {
-		totalSlow++;
-		threadJob[whoShouldDo(hash)]++;
-	}
-	else {
-		if (isMyTask(hash)) {
-			MPI_Send(&mpiGlobal.rank,1,MPI_INT,0,MPI_TASK_SLOW,MPI_COMM_WORLD);
-		}
-	}
-}
-void MpiTaskManager::submitQuickTask(int hash) {
-	if (head) {
-		totalQuick++;
-	}
-	else {
-		if (isMyTask(hash)) {
-			MPI_Send(&mpiGlobal.rank,1,MPI_INT,0,MPI_TASK_QUICK,MPI_COMM_WORLD);
-		}
-	}
-}
-ParallelHistogram::ParallelHistogram(const bool logScale,const bool clamped,const double min,const double max,const int count,const std::string &filename):logScale(logScale),clamped(clamped),min(logScale?log(min):min),max(logScale?log(max):max),count(count),filename(filename) {
+ParallelHistogram::ParallelHistogram(const bool logScale,const bool clamped,const double min,const double max,const int count,const string &filename):logScale(logScale),clamped(clamped),min(logScale?log(min):min),max(logScale?log(max):max),count(count),filename(filename) {
 	a=new long[count];
 	memset(a,0,sizeof(long)*count);
 };
